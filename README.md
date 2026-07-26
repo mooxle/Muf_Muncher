@@ -72,7 +72,19 @@ GET https://lgdc.uml.edu/fastchar/getbest
     &toDate=2026/07/24 10:00:00
 ```
 
-`ursiCode` is the ionosonde station (`DB049` = Dourbes, `JR055` = Juliusruh). Response is a commented, whitespace-delimited text table:
+`ursiCode` is the ionosonde station (`DB049` = Dourbes, `JR055` = Juliusruh).
+
+The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
+
+```bash
+curl -A "Mozilla/5.0" -G "https://lgdc.uml.edu/fastchar/getbest" \
+  --data-urlencode "ursiCode=DB049" \
+  --data-urlencode "charName=foF2,MUF(D),foEs" \
+  --data-urlencode "fromDate=2026/07/23 10:00:00" \
+  --data-urlencode "toDate=2026/07/24 10:00:00"
+```
+
+The `-A "Mozilla/5.0"` matters — the server behaves differently (or not at all) without a browser-like User-Agent. Response is a commented, whitespace-delimited text table:
 
 ```
 # Global Ionospheric Radio Observatory (GIRO)
