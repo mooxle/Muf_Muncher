@@ -1,0 +1,10 @@
+# Keep the build context to just what the image needs - this directory has
+# a lot of unrelated project files (POTA caches, geojson, etc.) that would
+# otherwise get sent to the Docker daemon on every build.
+*
+!muf.py
+!dashboard_template.html
+!requirements.txt
+!mufmuncher-icon.png
+!entrypoint.sh
+!muf-cron

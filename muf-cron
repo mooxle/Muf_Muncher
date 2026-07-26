@@ -1,0 +1,4 @@
+PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
+MUF_OUTPUT_DIR=/data
+*/15 * * * * root cd /app && python3 muf.py >> /var/log/muf-cron.log 2>&1
+

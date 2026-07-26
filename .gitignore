@@ -1,0 +1,20 @@
+# Local virtualenv
+.venv/
+__pycache__/
+*.pyc
+
+# Generated output - regenerated on every run, not source
+dashboard.html
+index.html
+muf_data.json
+summary.json
+muf/
+
+# Raw source art (unresized, and includes an earlier Pac-Man-style draft we
+# moved away from over trademark concerns) - only the cropped mufmuncher-icon.png
+# actually shipped in the app is tracked.
+mufmuncher.png
+mufmuncher2.png
+
+# OS cruft
+.DS_Store

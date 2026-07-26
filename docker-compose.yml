@@ -1,0 +1,11 @@
+services:
+  muf-dashboard:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - muf-data:/data
+    restart: unless-stopped
+
+volumes:
+  muf-data:
