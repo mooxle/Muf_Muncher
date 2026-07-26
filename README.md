@@ -1,4 +1,8 @@
-# 🦙📡 MUF Muncher
+<p align="center">
+  <img src="mufmuncher-icon.png" width="128" alt="MUF Muncher logo">
+</p>
+
+<h1 align="center">🦙📡 MUF Muncher</h1>
 
 > A self-hosted HF propagation dashboard for mid-Europe hams — MUF(D), foF2 and Sporadic-E from two European ionosondes, NOAA space weather, and live POTA activator spots, all cross-referenced into one glance-and-go page.
 
