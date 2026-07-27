@@ -57,6 +57,18 @@ TICKER_STATIONS = {
     "SO148": "Sopron",
     "TR169": "Tromso",
 }
+# ISO 3166-1 alpha-2, shown as a small badge next to each ticker station since
+# not every reader knows which country a given ionosonde sits in.
+TICKER_COUNTRY = {
+    "EB040": "ES",
+    "FF051": "GB",
+    "VT139": "IT",
+    "GM037": "IT",
+    "AT138": "GR",
+    "PQ052": "CZ",
+    "SO148": "HU",
+    "TR169": "NO",
+}
 TICKER_LOOKBACK = timedelta(hours=6)
 
 DATE_FORM = "d/m/Y H:M:S"
@@ -314,7 +326,7 @@ def render_html(store, stations, generated_at, pota_spots, ticker_stations):
         "indices": store.get("_indices", {"kindex": [], "sfi": []}),
         "potaSpots": pota_spots,
         "tickerStations": [
-            {"code": code, "name": name, **store["_ticker"][code]}
+            {"code": code, "name": name, "country": TICKER_COUNTRY.get(code), **store["_ticker"][code]}
             for code, name in ticker_stations.items()
             if code in store.get("_ticker", {})
         ],

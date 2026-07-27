@@ -132,13 +132,19 @@
   .band-legend-shared .item { display: flex; align-items: center; gap: 4px; }
   .band-legend-shared .sw { width: 8px; height: 8px; border-radius: 3px; flex: none; }
 
-  /* Ticker: more European MUF(D) readings as plain wrapped text, no charts -
+  /* Ticker: more European MUF(D) readings as small pill chips, no charts -
      these stations only ever carry a single current value, never history. */
-  .ticker-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 9px; font-size: 11.5px; color: var(--text-secondary); margin: -4px 0 14px 2px; font-variant-numeric: tabular-nums; }
-  .ticker-row .ticker-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 650; font-size: 10px; }
-  .ticker-row .ticker-item { white-space: nowrap; }
-  .ticker-row .ticker-code { color: var(--text-muted); }
-  .ticker-row .ticker-sep { color: var(--border); }
+  .ticker-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0 0 14px 2px; }
+  .ticker-row .ticker-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 650; font-size: 10px; margin-right: 2px; }
+  .ticker-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 10px; font-size: 11.5px; color: var(--text-primary); white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .ticker-chip .ticker-name { font-weight: 650; }
+  .ticker-chip .ticker-country { color: var(--text-muted); font-size: 10px; font-weight: 650; letter-spacing: .02em; }
+  .ticker-chip .ticker-value { color: var(--text-muted); }
 
   /* Secondary metrics: same tile look, smaller/quieter - de-emphasized by design */
   .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 8px; margin-bottom: 16px; }
@@ -375,12 +381,11 @@ document.getElementById('updatedFoot').textContent = 'Generated ' + DATA.generat
 const tickerStations = DATA.tickerStations || [];
 const tickerRowEl = document.getElementById('tickerRow');
 if (tickerStations.length) {
-  const items = tickerStations.map(s => {
+  const chips = tickerStations.map(s => {
     const val = s.muf != null ? `${s.muf.toFixed(2)} MHz` : '—';
-    return `<span class="ticker-item">${s.name} <span class="ticker-code">(${s.code})</span> ${val}</span>`;
+    return `<span class="ticker-chip"><span class="ticker-name">${s.name}</span><span class="ticker-country">${s.country || ''}</span><span class="ticker-value">${val}</span></span>`;
   });
-  tickerRowEl.innerHTML = '<span class="ticker-label">More Europe</span>' +
-    items.join('<span class="ticker-sep">&middot;</span>');
+  tickerRowEl.innerHTML = '<span class="ticker-label">More Europe</span>' + chips.join('');
 } else {
   tickerRowEl.remove();
 }
