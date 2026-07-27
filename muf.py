@@ -170,58 +170,38 @@ def fetch_sfi():
     return records
 
 
-def xray_class(flux):
-    """A/B/C/M/X flare classification from GOES long-channel (0.1-0.8nm) flux,
-    per the standard decade-scaled NOAA convention."""
-    for letter, threshold in (("X", 1e-4), ("M", 1e-5), ("C", 1e-6), ("B", 1e-7)):
-        if flux >= threshold:
-            return f"{letter}{flux / threshold:.1f}"
-    return f"A{flux / 1e-8:.1f}" if flux > 0 else "A0.0"
-
-
-def r_scale(flux):
-    """NOAA R-scale (radio blackout) from the same flux reading - a live
-    instantaneous read, not the "peak during a flare" the official scale
-    technically rates, but close enough for an at-a-glance tile."""
-    if flux >= 2e-3:
-        return "R5"
-    if flux >= 1e-3:
-        return "R4"
-    if flux >= 1e-4:
-        return "R3"
-    if flux >= 5e-5:
-        return "R2"
-    if flux >= 1e-5:
-        return "R1"
-    return "R0"
-
-
 def fetch_xray():
+    """GOES long-channel (0.1-0.8nm) flux history - the standard input for
+    A/B/C/M/X flare classification and NOAA's R-scale (radio blackout)
+    rating, both computed client-side from this raw series."""
     url = "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req) as response:
         raw = json.loads(response.read().decode("utf-8"))
-    long_channel = [r for r in raw if r.get("energy") == "0.1-0.8nm" and r.get("flux") is not None]
-    if not long_channel:
-        return None
-    latest = max(long_channel, key=lambda r: r["time_tag"])
-    ts = datetime.strptime(latest["time_tag"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-    flux = latest["flux"]
-    return {"time": ts.strftime(ISO_FORM), "flux": flux, "class": xray_class(flux), "rScale": r_scale(flux)}
+    records = []
+    for row in raw:
+        if row.get("energy") != "0.1-0.8nm" or row.get("flux") is None:
+            continue
+        ts = datetime.strptime(row["time_tag"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        records.append({"time": ts.strftime(ISO_FORM), "flux": row["flux"]})
+    return records
 
 
 def fetch_solar_wind():
-    """Latest bulk proton speed from NOAA's real-time solar wind summary -
-    a single current reading, same "no history needed" shape as the ticker."""
-    url = "https://services.swpc.noaa.gov/products/summary/solar-wind-speed.json"
+    """Hourly bulk proton speed history from ACE SWEPAM - enough for a short
+    sparkline, unlike the single-value real-time summary endpoint."""
+    url = "https://services.swpc.noaa.gov/json/ace/swepam/ace_swepam_1h.json"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req) as response:
         raw = json.loads(response.read().decode("utf-8"))
-    if not raw:
-        return None
-    row = raw[0]
-    ts = datetime.strptime(row["time_tag"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-    return {"time": ts.strftime(ISO_FORM), "speed": row["proton_speed"]}
+    records = []
+    for row in raw:
+        speed = row.get("speed")
+        if row.get("dsflag") != 0 or speed is None or speed <= 0:
+            continue
+        ts = datetime.strptime(row["time_tag"], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+        records.append({"time": ts.strftime(ISO_FORM), "speed": speed})
+    return records
 
 
 # Rough bounding box covering mainland Europe, UK, Scandinavia, Iceland and
@@ -429,16 +409,20 @@ try:
     indices["sfi"] = merge_and_prune(indices.get("sfi", []), fetch_sfi())
 except urllib.error.URLError as e:
     print(f"Failed to fetch SFI: {e}")
+# xray/solarWind used to store a single latest-reading dict rather than a
+# history list; discard any leftover dict from that older format instead of
+# crashing merge_and_prune on it.
+if not isinstance(indices.get("xray"), list):
+    indices["xray"] = []
+if not isinstance(indices.get("solarWind"), list):
+    indices["solarWind"] = []
+
 try:
-    xray = fetch_xray()
-    if xray is not None:
-        indices["xray"] = xray
+    indices["xray"] = merge_and_prune(indices.get("xray", []), fetch_xray())
 except (urllib.error.URLError, urllib.error.HTTPError) as e:
     print(f"Failed to fetch X-ray flux: {e}")
 try:
-    solar_wind = fetch_solar_wind()
-    if solar_wind is not None:
-        indices["solarWind"] = solar_wind
+    indices["solarWind"] = merge_and_prune(indices.get("solarWind", []), fetch_solar_wind())
 except (urllib.error.URLError, urllib.error.HTTPError) as e:
     print(f"Failed to fetch solar wind speed: {e}")
 store["_indices"] = indices

@@ -269,11 +269,6 @@
   .pota-showmore.hidden { display: none; }
 
   /* Space weather */
-  .sw-grid { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; gap: 16px; align-items: stretch; }
-  .sw-tile .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 6px; }
-  .sw-tile .value { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; }
-  .sw-tile .unit { font-size: 11px; color: var(--text-muted); margin-left: 2px; }
-  .sw-tile .spark { margin-top: 8px; height: 26px; width: 100%; display: block; }
   .kbar-wrap svg { width: 100%; height: 120px; display: block; }
   .kbar { }
   .kbar-label { font-size: 9.5px; fill: var(--text-primary); font-weight: 650; text-anchor: middle; }
@@ -285,7 +280,6 @@
 
   @media (max-width: 700px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
-    .sw-grid { grid-template-columns: 1fr; }
     .hero-sw-tile { flex-basis: 100%; aspect-ratio: auto; }
   }
 </style>
@@ -365,12 +359,10 @@
     Space Weather
   </div>
   <div class="chart-card">
-    <div class="chead"><h2>Solar Flux &amp; Geomagnetic Index</h2></div>
-    <div class="sw-grid">
-      <div class="sw-tile" id="sfiTile"></div>
-      <div class="kbar-wrap"><svg id="chartKindex"></svg></div>
-    </div>
-    <div class="disclaimer">SFI &amp; Kp: NOAA SWPC (services.swpc.noaa.gov), global (not station-specific).</div>
+    <div class="chead"><h2>Solar Flux, Geomagnetic &amp; Radio Blackout Indices</h2></div>
+    <div class="kpi-row" id="swKpiRow"></div>
+    <div class="kbar-wrap"><svg id="chartKindex"></svg></div>
+    <div class="disclaimer">SFI &amp; Kp: NOAA SWPC (services.swpc.noaa.gov), global (not station-specific). X-ray flux: NOAA SWPC / GOES primary X-ray sensor. Solar wind speed: NOAA SWPC / ACE SWEPAM.</div>
   </div>
 
   <div class="foot">
@@ -615,12 +607,12 @@ function sparkPath(records, key, w, h) {
 // ---------------------------------------------------------------- KPI tiles
 const kpiRow = document.getElementById('kpiRow');
 
-function addTile({ station, label, value, unit, records, key, color, cls }) {
+function addTile({ row, station, label, value, unit, records, key, color, cls, showDelta = true }) {
   const div = document.createElement('div');
   div.className = 'tile ' + (cls || '');
   if (station) div.dataset.station = station;
   let deltaHtml = '';
-  if (records && key) {
+  if (showDelta && records && key) {
     const d = deltaFor(records, key);
     if (d) {
       const cls2 = Math.abs(d.value) < 0.005 ? 'flat' : (d.value >= 0 ? 'up' : 'down');
@@ -638,7 +630,7 @@ function addTile({ station, label, value, unit, records, key, color, cls }) {
       <path d="${sparkPath(records, key, 120, 20)}" fill="none" stroke="${color}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,1)"/>
     </svg>` : ''}
   `;
-  kpiRow.appendChild(div);
+  (row || kpiRow).appendChild(div);
   return div;
 }
 
@@ -913,11 +905,11 @@ function gScale(kp) {
 
 const lastSfiRow = lastOf(swIndices.sfi);
 const lastKpRow = lastOf(swIndices.kindex);
-const xray = swIndices.xray;
-const wind = swIndices.solarWind;
+const lastXrayRow = lastOf(swIndices.xray);
+const lastWindRow = lastOf(swIndices.solarWind);
 
 // Rough, at-a-glance "is this good for HF" bands - not official ratings,
-// just enough to color-code the tile. Kp reuses the same thresholds as the
+// just enough to color-code the tiles. Kp reuses the same thresholds as the
 // K-index bar chart below (kpColor) so the two stay consistent.
 function ratingColor(tier) {
   if (tier === 'good') return { bg: 'var(--good)', fg: '#ffffff' };
@@ -937,11 +929,29 @@ function kpTier(kp) {
   if (kp >= 4) return 'warning';
   return 'good';
 }
-function rScaleTier(rScale) {
-  if (!rScale) return null;
-  if (rScale === 'R0') return 'good';
-  if (rScale === 'R1' || rScale === 'R2') return 'warning';
-  return 'critical';
+// A/B/C/M/X flare classification from GOES long-channel flux, and the
+// derived NOAA R-scale (radio blackout) rating - standard decade-scaled
+// conventions, computed client-side from the raw flux history we store.
+function xrayClassLabel(flux) {
+  if (flux == null) return null;
+  for (const [letter, threshold] of [['X', 1e-4], ['M', 1e-5], ['C', 1e-6], ['B', 1e-7]]) {
+    if (flux >= threshold) return `${letter}${(flux / threshold).toFixed(1)}`;
+  }
+  return flux > 0 ? `A${(flux / 1e-8).toFixed(1)}` : 'A0.0';
+}
+function rScaleLabel(flux) {
+  if (flux == null) return null;
+  if (flux >= 2e-3) return 'R5';
+  if (flux >= 1e-3) return 'R4';
+  if (flux >= 1e-4) return 'R3';
+  if (flux >= 5e-5) return 'R2';
+  if (flux >= 1e-5) return 'R1';
+  return 'R0';
+}
+function rScaleTier(flux) {
+  const r = rScaleLabel(flux);
+  if (!r) return null;
+  return r === 'R0' ? 'good' : (r === 'R1' || r === 'R2') ? 'warning' : 'critical';
 }
 function windTier(speed) {
   if (speed == null) return null;
@@ -957,7 +967,8 @@ function swBadge(text, tier, ratingLabel) {
 
 const sfiNum = lastSfiRow ? lastSfiRow.flux : null;
 const kpNum = lastKpRow ? lastKpRow.kp : null;
-const windNum = wind ? wind.speed : null;
+const xrayFluxNum = lastXrayRow ? lastXrayRow.flux : null;
+const windNum = lastWindRow ? lastWindRow.speed : null;
 
 const swTile = document.createElement('a');
 swTile.className = 'hero-sw-tile';
@@ -969,7 +980,7 @@ swTile.innerHTML = `
   </div>
   <div class="sw-row"><span class="k">SFI</span>${swBadge(sfiNum != null ? sfiNum.toFixed(0) : '–', sfiTier(sfiNum))}</div>
   <div class="sw-row"><span class="k">Kp</span>${swBadge(kpNum != null ? kpNum.toFixed(1) : '–', kpTier(kpNum), gScale(kpNum))}</div>
-  <div class="sw-row"><span class="k">X-ray</span>${swBadge(xray ? xray.class : '–', rScaleTier(xray ? xray.rScale : null), xray ? xray.rScale : '')}</div>
+  <div class="sw-row"><span class="k">X-ray</span>${swBadge(xrayClassLabel(xrayFluxNum) || '–', rScaleTier(xrayFluxNum), rScaleLabel(xrayFluxNum) || '')}</div>
   <div class="sw-row"><span class="k">Wind</span>${swBadge(windNum != null ? Math.round(windNum) + ' km/s' : '–', windTier(windNum))}</div>
 `;
 heroRow.appendChild(swTile);
@@ -1142,16 +1153,35 @@ renderPotaList();
 // ---------------------------------------------------------------- Space weather
 const sfiRecords = swIndices.sfi || [];
 const kIndexRecords = swIndices.kindex || [];
+const xrayRecords = swIndices.xray || [];
+const windRecords = swIndices.solarWind || [];
 
-const sfiTile = document.getElementById('sfiTile');
-const lastSfi = sfiRecords.length ? sfiRecords[sfiRecords.length - 1] : null;
-sfiTile.innerHTML = `
-  <div class="label">Solar Flux Index (10.7cm)</div>
-  <div><span class="value">${lastSfi ? lastSfi.flux.toFixed(0) : '–'}</span><span class="unit">sfu</span></div>
-  <svg class="spark" viewBox="0 0 200 26" preserveAspectRatio="none">
-    <path d="${sparkPath(sfiRecords, 'flux', 200, 24)}" fill="none" stroke="var(--neutral-series)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,1)"/>
-  </svg>
-`;
+const swKpiRow = document.getElementById('swKpiRow');
+
+const lastSfi = lastOf(sfiRecords);
+addTile({
+  row: swKpiRow, label: 'Solar Flux Index', value: lastSfi ? lastSfi.flux.toFixed(0) : '–', unit: 'sfu',
+  records: sfiRecords, key: 'flux', color: 'var(--neutral-series)',
+});
+
+const lastKp = lastOf(kIndexRecords);
+addTile({
+  row: swKpiRow, label: 'Kp Index', value: lastKp ? lastKp.kp.toFixed(1) : '–', unit: gScale(lastKp ? lastKp.kp : null),
+  records: kIndexRecords, key: 'kp', color: kpColor(lastKp ? lastKp.kp : 0),
+});
+
+const lastXray = lastOf(xrayRecords);
+const xrayFlux = lastXray ? lastXray.flux : null;
+addTile({
+  row: swKpiRow, label: 'X-ray Flux (GOES)', value: xrayClassLabel(xrayFlux) || '–', unit: rScaleLabel(xrayFlux) || '',
+  records: xrayRecords, key: 'flux', color: ratingColor(rScaleTier(xrayFlux)).bg, showDelta: false,
+});
+
+const lastWind = lastOf(windRecords);
+addTile({
+  row: swKpiRow, label: 'Solar Wind Speed', value: lastWind ? Math.round(lastWind.speed) : '–', unit: 'km/s',
+  records: windRecords, key: 'speed', color: ratingColor(windTier(lastWind ? lastWind.speed : null)).bg,
+});
 
 function kpColor(kp) {
   if (kp >= 7) return 'var(--critical)';
