@@ -87,6 +87,7 @@
   }
   .stat-strip .stat-item { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
   .stat-strip .stat-sep { width: 1px; height: 13px; background: var(--border); flex: none; }
+  .coverage-note { font-size: 11px; color: var(--text-muted); margin: -6px 0 14px 2px; }
   .live-clock { text-align: right; font-family: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace; }
   .clock-utc { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--text-primary); letter-spacing: .01em; }
   .clock-date { font-size: 11px; font-weight: 500; color: var(--text-muted); letter-spacing: .03em; margin-top: 1px; font-family: -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif; }
@@ -316,8 +317,6 @@
   </div>
   <div class="stat-strip">
     <span class="stat-item data-updated"><span class="dot" id="dataDot"></span>Data updated <span id="dataUpdated">--:--:--</span> UTC (<span id="dataAge">-</span>)<button id="reloadBtn" class="reload-btn" type="button" aria-label="Reload dashboard" title="Reload dashboard"><svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M16 4v4h-4M4 16v-4h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.6 11a5.6 5.6 0 0 1 9.5-3.6M15.4 9a5.6 5.6 0 0 1-9.5 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></span>
-    <span class="stat-sep"></span>
-    <span class="stat-item" id="hdrSub"></span>
   </div>
 
   <!-- The answer to "is HF worth it right now": MUF(D) + band chips, per station -->
@@ -330,6 +329,8 @@
   </div>
 
   <div class="ticker-row" id="tickerRow"></div>
+
+  <div class="coverage-note" id="hdrSub"></div>
 
   <a class="map-cta" href="https://prop.kc2g.com" target="_blank" rel="noopener noreferrer">
     <div class="map-cta-icon">
@@ -421,9 +422,8 @@ const METRICS = [
 const SECONDARY_METRICS = METRICS.filter(m => m.key !== 'muf'); // muf lives in the hero row instead
 
 document.getElementById('hdrSub').textContent =
-  stations.map(s => `${s.name} (${s.code})`).join(' & ') + ' full 24h history' +
-  ` · +${(DATA.tickerStations || []).length} more via ticker (current reading only)` +
-  ' · no data older than 24h retained';
+  stations.map(s => `${s.name} (${s.code})`).join(' & ') +
+  ' full 24h history · no data older than 24h retained';
 document.getElementById('updatedFoot').textContent = 'Generated ' + DATA.generatedAt;
 document.getElementById('versionFoot').textContent = 'MUF Muncher v' + (DATA.version || '?');
 
