@@ -114,12 +114,18 @@
   .ptr-indicator.ready { color: var(--good); }
   .ptr-indicator.refreshing svg { animation: reload-spin .6s linear infinite; }
 
-  /* Hero: the answer to "is HF worth it right now" - MUF(D) + band chips per station */
-  .hero-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-bottom: 10px; }
-  .hero-card {
+  /* Hero: the answer to "is HF worth it right now" - MUF(D) + band chips per
+     station, plus a square space-weather glance tile squeezed into the same
+     row. Flex (not grid) so the square tile can hold a fixed size while the
+     station cards share the rest of the width. */
+  .hero-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .hero-card, .hero-sw-tile {
     background: var(--surface-1); border: 1px solid var(--border); border-top: 3px solid var(--hero-color, var(--series-1));
-    border-radius: 10px; padding: 14px 16px; transition: opacity .15s ease;
+    border-radius: 10px; transition: opacity .15s ease, border-color .15s ease;
+    text-decoration: none; color: inherit; cursor: pointer;
   }
+  .hero-card:hover, .hero-sw-tile:hover { border-color: var(--hero-color, var(--neutral-series)); }
+  .hero-card { flex: 1 1 230px; padding: 14px 16px; }
   .hero-card.dim { opacity: .35; }
   .hero-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--hero-color, var(--text-primary)); margin-bottom: 2px; }
   .hero-value-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -128,6 +134,16 @@
   .hero-sub { font-size: 10.5px; color: var(--text-muted); }
   .hero-spark { margin-top: 6px; height: 24px; width: 100%; display: block; }
   .hero-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+
+  .hero-sw-tile {
+    flex: 0 0 168px; aspect-ratio: 1; border-top-color: var(--neutral-series);
+    padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px;
+  }
+  .hero-sw-tile .sw-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral-series); margin-bottom: 2px; }
+  .hero-sw-tile .sw-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 12px; }
+  .hero-sw-tile .sw-row .k { color: var(--text-secondary); }
+  .hero-sw-tile .sw-row .v { font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .hero-sw-tile .sw-row .v .badge { font-size: 9.5px; color: var(--text-muted); font-weight: 600; margin-left: 3px; }
   .band-legend-shared { display: flex; align-items: center; gap: 12px; font-size: 10.5px; color: var(--text-muted); flex-wrap: wrap; margin: 0 0 16px 2px; }
   .band-legend-shared .item { display: flex; align-items: center; gap: 4px; }
   .band-legend-shared .sw { width: 8px; height: 8px; border-radius: 3px; flex: none; }
@@ -161,7 +177,7 @@
   .tile .spark { margin-top: 5px; height: 16px; width: 100%; display: block; }
   .tile.time .value { font-size: 14px; }
 
-  .section-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 650; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 8px; }
+  .section-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 650; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 8px; scroll-margin-top: 12px; }
   .section-title:first-of-type { margin-top: 4px; }
   .section-title svg { flex: none; }
 
@@ -227,15 +243,18 @@
   .pota-meta { flex: none; color: var(--text-muted); font-size: 11px; text-align: right; white-space: nowrap; }
   .pota-empty { color: var(--text-muted); font-size: 12.5px; padding: 8px 0; }
 
-  /* Filters: click to hide/show a subset - same interaction as the chart
-     legends above, so it doesn't introduce a new UI pattern. */
+  /* Filters: click a band/entity to narrow the list to just that selection
+     (multiple selections within a group OR together); empty selection shows
+     everything. Inclusion-style, unlike the exclusion-style chart legends
+     above - filtering a list and toggling a chart series are different
+     enough tasks to warrant different interactions. */
   .pota-filters { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
   .pota-filters button {
     display: flex; align-items: center; gap: 5px; font: inherit; font-size: 11px; color: var(--text-secondary);
     background: none; border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; cursor: pointer;
   }
   .pota-filters button:hover { background: var(--surface-2); }
-  .pota-filters button.off { opacity: .4; text-decoration: line-through; }
+  .pota-filters button.active { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
   .pota-filters .pota-filter-sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 2px; }
 
   .pota-showmore {
@@ -264,6 +283,7 @@
   @media (max-width: 700px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
     .sw-grid { grid-template-columns: 1fr; }
+    .hero-sw-tile { flex-basis: 100%; aspect-ratio: auto; }
   }
 </style>
 </head>
@@ -330,14 +350,14 @@
     <div class="disclaimer">Source: pota.app &middot; refreshed each dashboard cycle &middot; band colors cross-reference the Band Opening estimate above.</div>
   </div>
 
-  <div class="section-title">
+  <div class="section-title" id="ionosonde-detail">
     <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><circle cx="10" cy="16" r="1.3" fill="currentColor"/><path d="M6 13a5 5 0 0 1 8 0M3.5 10.5a8.5 8.5 0 0 1 13 0M1 8a12 12 0 0 1 18 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
     Ionosonde detail
   </div>
   <div class="kpi-row" id="kpiRow"></div>
   <div id="chartsContainer"></div>
 
-  <div class="section-title">
+  <div class="section-title" id="space-weather">
     <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><circle cx="10" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/><g stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="10" y1="1" x2="10" y2="3"/><line x1="10" y1="17" x2="10" y2="19"/><line x1="1" y1="10" x2="3" y2="10"/><line x1="17" y1="10" x2="19" y2="10"/><line x1="3.5" y1="3.5" x2="5" y2="5"/><line x1="15" y1="15" x2="16.5" y2="16.5"/><line x1="16.5" y1="3.5" x2="15" y2="5"/><line x1="5" y1="15" x2="3.5" y2="16.5"/></g></svg>
     Space Weather
   </div>
@@ -854,8 +874,9 @@ for (const s of stations) {
     return `<span class="band-chip" style="background:${bg};color:${fg}" title="${b.name}: ${st.label} (MUF ${muf != null ? muf.toFixed(1) : '–'} MHz vs ${b.freq} MHz)">${b.name}</span>`;
   }).join('');
 
-  const card = document.createElement('div');
+  const card = document.createElement('a');
   card.className = 'hero-card';
+  card.href = '#ionosonde-detail';
   card.dataset.station = s.code;
   card.style.setProperty('--hero-color', s.color);
   card.innerHTML = `
@@ -872,6 +893,37 @@ for (const s of stations) {
   `;
   heroRow.appendChild(card);
 }
+
+// Squeezed into the same row as a compact glance tile - full detail lives in
+// the Space Weather section below, which this tile links to.
+function lastOf(arr) { return arr && arr.length ? arr[arr.length - 1] : null; }
+
+function gScale(kp) {
+  if (kp == null) return 'G0';
+  if (kp >= 9) return 'G5';
+  if (kp >= 8) return 'G4';
+  if (kp >= 7) return 'G3';
+  if (kp >= 6) return 'G2';
+  if (kp >= 5) return 'G1';
+  return 'G0';
+}
+
+const lastSfiRow = lastOf(swIndices.sfi);
+const lastKpRow = lastOf(swIndices.kindex);
+const xray = swIndices.xray;
+const wind = swIndices.solarWind;
+
+const swTile = document.createElement('a');
+swTile.className = 'hero-sw-tile';
+swTile.href = '#space-weather';
+swTile.innerHTML = `
+  <div class="sw-title">Space Weather</div>
+  <div class="sw-row"><span class="k">SFI</span><span class="v">${lastSfiRow ? lastSfiRow.flux.toFixed(0) : '–'}</span></div>
+  <div class="sw-row"><span class="k">Kp</span><span class="v">${lastKpRow ? lastKpRow.kp.toFixed(1) : '–'}<span class="badge">${gScale(lastKpRow ? lastKpRow.kp : null)}</span></span></div>
+  <div class="sw-row"><span class="k">X-ray</span><span class="v">${xray ? xray.class : '–'}<span class="badge">${xray ? xray.rScale : ''}</span></span></div>
+  <div class="sw-row"><span class="k">Wind</span><span class="v">${wind ? Math.round(wind.speed) + ' km/s' : '–'}</span></div>
+`;
+heroRow.appendChild(swTile);
 
 // ---------------------------------------------------------------- POTA activity
 // Cross-references each spot's band against our own MUF-derived band status
@@ -919,8 +971,11 @@ const potaFiltersEl = document.getElementById('potaFilters');
 const potaShowMoreBtn = document.getElementById('potaShowMoreBtn');
 const potaSpots = DATA.potaSpots || [];
 const POTA_CAP = 7;
-const potaHiddenBands = new Set();
-const potaHiddenEntities = new Set();
+// Empty set = no filter active (show everything) for that group; a non-empty
+// set narrows the list to only the selected bands/entities (OR within a
+// group, AND across the two groups).
+const potaSelectedBands = new Set();
+const potaSelectedEntities = new Set();
 let potaExpanded = false;
 
 function potaEntity(reference) {
@@ -972,9 +1027,9 @@ function renderPotaFilters() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = band;
-    btn.className = potaHiddenBands.has(band) ? 'off' : '';
+    btn.className = potaSelectedBands.has(band) ? 'active' : '';
     btn.addEventListener('click', () => {
-      potaHiddenBands.has(band) ? potaHiddenBands.delete(band) : potaHiddenBands.add(band);
+      potaSelectedBands.has(band) ? potaSelectedBands.delete(band) : potaSelectedBands.add(band);
       potaExpanded = false;
       renderPotaFilters();
       renderPotaList();
@@ -990,9 +1045,9 @@ function renderPotaFilters() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = entity;
-    btn.className = potaHiddenEntities.has(entity) ? 'off' : '';
+    btn.className = potaSelectedEntities.has(entity) ? 'active' : '';
     btn.addEventListener('click', () => {
-      potaHiddenEntities.has(entity) ? potaHiddenEntities.delete(entity) : potaHiddenEntities.add(entity);
+      potaSelectedEntities.has(entity) ? potaSelectedEntities.delete(entity) : potaSelectedEntities.add(entity);
       potaExpanded = false;
       renderPotaFilters();
       renderPotaList();
@@ -1003,7 +1058,8 @@ function renderPotaFilters() {
 
 function renderPotaList() {
   const filtered = potaSpots.filter(s =>
-    !potaHiddenBands.has(s.band) && !potaHiddenEntities.has(potaEntity(s.reference))
+    (potaSelectedBands.size === 0 || potaSelectedBands.has(s.band)) &&
+    (potaSelectedEntities.size === 0 || potaSelectedEntities.has(potaEntity(s.reference)))
   );
 
   potaList.innerHTML = '';
