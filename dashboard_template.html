@@ -132,6 +132,14 @@
   .band-legend-shared .item { display: flex; align-items: center; gap: 4px; }
   .band-legend-shared .sw { width: 8px; height: 8px; border-radius: 3px; flex: none; }
 
+  /* Ticker: more European MUF(D) readings as plain wrapped text, no charts -
+     these stations only ever carry a single current value, never history. */
+  .ticker-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 9px; font-size: 11.5px; color: var(--text-secondary); margin: -4px 0 14px 2px; font-variant-numeric: tabular-nums; }
+  .ticker-row .ticker-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 650; font-size: 10px; }
+  .ticker-row .ticker-item { white-space: nowrap; }
+  .ticker-row .ticker-code { color: var(--text-muted); }
+  .ticker-row .ticker-sep { color: var(--border); }
+
   /* Secondary metrics: same tile look, smaller/quieter - de-emphasized by design */
   .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 8px; margin-bottom: 16px; }
   .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; transition: opacity .15s ease, border-color .15s ease; }
@@ -267,6 +275,8 @@
     <span>&mdash; estimated from MUF(D) vs. band edge, not path-specific</span>
   </div>
 
+  <div class="ticker-row" id="tickerRow"></div>
+
   <a class="map-cta" href="https://prop.kc2g.com" target="_blank" rel="noopener noreferrer">
     <div class="map-cta-icon">
       <svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true">
@@ -358,6 +368,22 @@ const SECONDARY_METRICS = METRICS.filter(m => m.key !== 'muf'); // muf lives in 
 document.getElementById('hdrSub').textContent =
   stations.map(s => `${s.name} (${s.code})`).join(' & ') + ' · Ionosonde-derived · last 24h';
 document.getElementById('updatedFoot').textContent = 'Generated ' + DATA.generatedAt;
+
+// Ticker: more European MUF(D) readings, current value only - names/codes are
+// our own static config (not external/untrusted input), so building this via
+// innerHTML is fine.
+const tickerStations = DATA.tickerStations || [];
+const tickerRowEl = document.getElementById('tickerRow');
+if (tickerStations.length) {
+  const items = tickerStations.map(s => {
+    const val = s.muf != null ? `${s.muf.toFixed(2)} MHz` : '—';
+    return `<span class="ticker-item">${s.name} <span class="ticker-code">(${s.code})</span> ${val}</span>`;
+  });
+  tickerRowEl.innerHTML = '<span class="ticker-label">More Europe</span>' +
+    items.join('<span class="ticker-sep">&middot;</span>');
+} else {
+  tickerRowEl.remove();
+}
 
 // Reload + pull-to-refresh: this page is static (regenerated every 15min by
 // cron) and re-served on plain navigation, so "refresh" just needs a fresh,

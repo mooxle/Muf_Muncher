@@ -40,6 +40,25 @@ stations = {
 # be unscoreable ("---" in the raw feed), so foEs is often the only usable value.
 chars = "foF2,MUF(D),foEs"
 
+# Ticker: more European stations, current MUF(D) only (no 24h history/chart -
+# that's what keeps these cheap to add). Picked from GIRO's full station list
+# (https://lgdc.uml.edu/ionoweb/locations) for European coverage, then pruned
+# to only the ones that actually return recent data - Chilton (RL052), Warsaw
+# (MZ152) and its Olsztyn alternate (OL246), Kiruna (KI167), and Nicosia
+# (NI135, last reading was 12 days old) are the only stations in their
+# countries but currently offline/stale, so those countries have no entry.
+TICKER_STATIONS = {
+    "EB040": "Roquetes",
+    "FF051": "Fairford",
+    "VT139": "San Vito",
+    "GM037": "Gibilmanna",
+    "AT138": "Athens",
+    "PQ052": "Pruhonice",
+    "SO148": "Sopron",
+    "TR169": "Tromso",
+}
+TICKER_LOOKBACK = timedelta(hours=6)
+
 DATE_FORM = "d/m/Y H:M:S"
 
 
@@ -83,6 +102,36 @@ def fetch_station(station):
             }
         )
     return records
+
+
+def fetch_ticker_value(station):
+    """Latest MUF(D) only, short lookback window - no history kept, just
+    today's reading for the ticker row."""
+    query = urllib.parse.urlencode(
+        {
+            "ursiCode": station,
+            "charName": "MUF(D)",
+            "fromDate": (now - TICKER_LOOKBACK).strftime("%Y/%m/%d %H:%M:%S"),
+            "toDate": to_time,
+        }
+    )
+    url = f"https://lgdc.uml.edu/fastchar/getbest?{query}"
+    req = urllib.request.Request(
+        url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+    )
+    with urllib.request.urlopen(req) as response:
+        raw_data = response.read().decode("utf-8")
+
+    latest = None
+    for line in raw_data.splitlines():
+        if line.startswith("#") or not line.strip():
+            continue
+        parts = line.split()
+        ts = datetime.strptime(parts[0], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+        muf = parse_float_or_none(parts[2])
+        if muf is not None:
+            latest = {"time": ts.strftime(ISO_FORM), "muf": muf}
+    return latest
 
 
 def fetch_kindex():
@@ -254,7 +303,7 @@ EXTRA_OUTPUT_PATHS = [
 ]
 
 
-def render_html(store, stations, generated_at, pota_spots):
+def render_html(store, stations, generated_at, pota_spots, ticker_stations):
     payload = {
         "generatedAt": generated_at.strftime(ISO_FORM),
         "stations": [
@@ -264,6 +313,11 @@ def render_html(store, stations, generated_at, pota_spots):
         ],
         "indices": store.get("_indices", {"kindex": [], "sfi": []}),
         "potaSpots": pota_spots,
+        "tickerStations": [
+            {"code": code, "name": name, **store["_ticker"][code]}
+            for code, name in ticker_stations.items()
+            if code in store.get("_ticker", {})
+        ],
     }
     with open(HTML_TEMPLATE_PATH) as f:
         template = f.read()
@@ -318,8 +372,22 @@ except urllib.error.URLError as e:
     print(f"Failed to fetch POTA spots: {e}")
     pota_spots = []
 
+ticker = store.get("_ticker", {})
+for code, name in TICKER_STATIONS.items():
+    print(f"Fetching ticker value for {name} ({code})...")
+    try:
+        latest = fetch_ticker_value(code)
+    except (urllib.error.URLError, urllib.error.HTTPError) as e:
+        print(f"Failed to fetch ticker value for {name}: {e}")
+        latest = None
+    if latest is not None:
+        ticker[code] = latest
+    # else: keep whatever value (if any) is already in the store, so a
+    # transient failure shows the last known reading instead of nothing.
+store["_ticker"] = ticker
+
 save_store(store)
-html_path = render_html(store, stations, now, pota_spots)
+html_path = render_html(store, stations, now, pota_spots, TICKER_STATIONS)
 summary_path = render_summary(store, stations, now)
 print(f"Dashboard written to {html_path}")
 print(f"Summary written to {summary_path}")
