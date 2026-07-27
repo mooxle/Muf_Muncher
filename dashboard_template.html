@@ -139,11 +139,14 @@
     flex: 0 0 168px; aspect-ratio: 1; border-top-color: var(--neutral-series);
     padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px;
   }
-  .hero-sw-tile .sw-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral-series); margin-bottom: 2px; }
+  .hero-sw-tile .sw-title { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral-series); margin-bottom: 2px; }
   .hero-sw-tile .sw-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 12px; }
   .hero-sw-tile .sw-row .k { color: var(--text-secondary); }
-  .hero-sw-tile .sw-row .v { font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .hero-sw-tile .sw-row .v .badge { font-size: 9.5px; color: var(--text-muted); font-weight: 600; margin-left: 3px; }
+  .hero-sw-tile .sw-row .v-badge {
+    display: inline-flex; align-items: baseline; gap: 4px; padding: 1px 7px; border-radius: 6px;
+    font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .hero-sw-tile .sw-row .v-badge .rating { font-size: 9.5px; font-weight: 700; opacity: .85; }
   .band-legend-shared { display: flex; align-items: center; gap: 12px; font-size: 10.5px; color: var(--text-muted); flex-wrap: wrap; margin: 0 0 16px 2px; }
   .band-legend-shared .item { display: flex; align-items: center; gap: 4px; }
   .band-legend-shared .sw { width: 8px; height: 8px; border-radius: 3px; flex: none; }
@@ -913,15 +916,61 @@ const lastKpRow = lastOf(swIndices.kindex);
 const xray = swIndices.xray;
 const wind = swIndices.solarWind;
 
+// Rough, at-a-glance "is this good for HF" bands - not official ratings,
+// just enough to color-code the tile. Kp reuses the same thresholds as the
+// K-index bar chart below (kpColor) so the two stay consistent.
+function ratingColor(tier) {
+  if (tier === 'good') return { bg: 'var(--good)', fg: '#ffffff' };
+  if (tier === 'warning') return { bg: 'var(--warning)', fg: '#ffffff' };
+  if (tier === 'critical') return { bg: 'var(--critical)', fg: '#ffffff' };
+  return { bg: 'var(--surface-2)', fg: 'var(--text-secondary)' };
+}
+function sfiTier(flux) {
+  if (flux == null) return null;
+  if (flux < 80) return 'critical';
+  if (flux < 100) return 'warning';
+  return 'good';
+}
+function kpTier(kp) {
+  if (kp == null) return null;
+  if (kp >= 5) return 'critical';
+  if (kp >= 4) return 'warning';
+  return 'good';
+}
+function rScaleTier(rScale) {
+  if (!rScale) return null;
+  if (rScale === 'R0') return 'good';
+  if (rScale === 'R1' || rScale === 'R2') return 'warning';
+  return 'critical';
+}
+function windTier(speed) {
+  if (speed == null) return null;
+  if (speed < 400) return 'good';
+  if (speed < 600) return 'warning';
+  return 'critical';
+}
+function swBadge(text, tier, ratingLabel) {
+  const { bg, fg } = ratingColor(tier);
+  const rating = ratingLabel ? `<span class="rating">${ratingLabel}</span>` : '';
+  return `<span class="v-badge" style="background:${bg};color:${fg}">${text}${rating}</span>`;
+}
+
+const sfiNum = lastSfiRow ? lastSfiRow.flux : null;
+const kpNum = lastKpRow ? lastKpRow.kp : null;
+const windNum = wind ? wind.speed : null;
+
 const swTile = document.createElement('a');
 swTile.className = 'hero-sw-tile';
 swTile.href = '#space-weather';
 swTile.innerHTML = `
-  <div class="sw-title">Space Weather</div>
-  <div class="sw-row"><span class="k">SFI</span><span class="v">${lastSfiRow ? lastSfiRow.flux.toFixed(0) : '–'}</span></div>
-  <div class="sw-row"><span class="k">Kp</span><span class="v">${lastKpRow ? lastKpRow.kp.toFixed(1) : '–'}<span class="badge">${gScale(lastKpRow ? lastKpRow.kp : null)}</span></span></div>
-  <div class="sw-row"><span class="k">X-ray</span><span class="v">${xray ? xray.class : '–'}<span class="badge">${xray ? xray.rScale : ''}</span></span></div>
-  <div class="sw-row"><span class="k">Wind</span><span class="v">${wind ? Math.round(wind.speed) + ' km/s' : '–'}</span></div>
+  <div class="sw-title">
+    <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><circle cx="10" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/><g stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="10" y1="1" x2="10" y2="3"/><line x1="10" y1="17" x2="10" y2="19"/><line x1="1" y1="10" x2="3" y2="10"/><line x1="17" y1="10" x2="19" y2="10"/><line x1="3.5" y1="3.5" x2="5" y2="5"/><line x1="15" y1="15" x2="16.5" y2="16.5"/><line x1="16.5" y1="3.5" x2="15" y2="5"/><line x1="5" y1="15" x2="3.5" y2="16.5"/></g></svg>
+    Space Weather
+  </div>
+  <div class="sw-row"><span class="k">SFI</span>${swBadge(sfiNum != null ? sfiNum.toFixed(0) : '–', sfiTier(sfiNum))}</div>
+  <div class="sw-row"><span class="k">Kp</span>${swBadge(kpNum != null ? kpNum.toFixed(1) : '–', kpTier(kpNum), gScale(kpNum))}</div>
+  <div class="sw-row"><span class="k">X-ray</span>${swBadge(xray ? xray.class : '–', rScaleTier(xray ? xray.rScale : null), xray ? xray.rScale : '')}</div>
+  <div class="sw-row"><span class="k">Wind</span>${swBadge(windNum != null ? Math.round(windNum) + ' km/s' : '–', windTier(windNum))}</div>
 `;
 heroRow.appendChild(swTile);
 
