@@ -378,16 +378,17 @@
   </div>
 
   <div class="foot">
-    <span>Source: Lowell GIRO Data Center &middot; DIDBase (CC-BY-NC-SA 4.0) &middot; giro.uml.edu &middot; NOAA SWPC</span>
+    <span>Source: Lowell GIRO Data Center &middot; DIDBase (CC-BY-NC-SA 4.0) &middot; giro.uml.edu &middot; NOAA SWPC &middot; pota.app</span>
     <span id="updatedFoot"></span>
   </div>
   <div class="credit">
     Ionosonde data: Global Ionospheric Radio Observatory (GIRO). Reinisch, B. W., and I. A. Galkin (2011), Global ionospheric radio observatory (GIRO), <em>Earth, Planets and Space</em>, 63, 377&ndash;381, doi:10.5047/eps.2011.03.001. See <a href="http://spase.info/SMWG/Observatory/GIRO" target="_blank" rel="noopener">spase.info/SMWG/Observatory/GIRO</a>.
   </div>
   <div class="credit">
-    This is a private, non-commercial project. It is not an official NOAA or LGDC/GIRO product, and no endorsement by either organization is implied.
+    This is a private, non-commercial project. It is not an official NOAA, LGDC/GIRO, or POTA product, and no endorsement by any of them is implied.
   </div>
   <div class="credit">Built by Max Sammet, <a href="https://www.qrz.com/db/DA6MAX" target="_blank" rel="noopener">DA6MAX</a> &middot; built with assistance from <a href="https://www.anthropic.com/claude" target="_blank" rel="noopener">Claude</a> (Anthropic)</div>
+  <div class="credit"><span id="versionFoot"></span> &middot; MIT licensed &middot; <a href="https://github.com/mooxle/Muf_Muncher" target="_blank" rel="noopener">Source on GitHub</a></div>
 </div>
 
 <script>
@@ -420,8 +421,11 @@ const METRICS = [
 const SECONDARY_METRICS = METRICS.filter(m => m.key !== 'muf'); // muf lives in the hero row instead
 
 document.getElementById('hdrSub').textContent =
-  stations.map(s => `${s.name} (${s.code})`).join(' & ') + ' · Ionosonde-derived · last 24h';
+  stations.map(s => `${s.name} (${s.code})`).join(' & ') + ' full 24h history' +
+  ` · +${(DATA.tickerStations || []).length} more via ticker (current reading only)` +
+  ' · no data older than 24h retained';
 document.getElementById('updatedFoot').textContent = 'Generated ' + DATA.generatedAt;
+document.getElementById('versionFoot').textContent = 'MUF Muncher v' + (DATA.version || '?');
 
 // Ticker: more European MUF(D) readings, current value only - names/codes are
 // our own static config (not external/untrusted input), so building this via

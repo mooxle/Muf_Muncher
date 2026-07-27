@@ -4,11 +4,13 @@
 
 <h1 align="center">MUF Muncher</h1>
 
-> A self-hosted HF propagation dashboard for mid-Europe hams — MUF(D), foF2 and Sporadic-E from two European ionosondes, NOAA space weather, and live POTA activator spots, all cross-referenced into one glance-and-go page.
+<p align="center"><strong>v1.0.0</strong></p>
 
-Every 15 minutes, a small Python script pulls ionosonde readings for Dourbes (Belgium) and Juliusruh (Germany), NOAA's solar flux and K-index, and live POTA spots across Europe — then renders a single self-contained HTML dashboard (no build step, no framework, no external JS at runtime) that answers one question: **is HF worth it right now, and where?**
+> A self-hosted HF propagation dashboard for mid-Europe hams — MUF(D), foF2 and Sporadic-E from ten European ionosondes, full NOAA space weather (SFI, Kp, X-ray, solar wind), and live POTA activator spots, all cross-referenced into one glance-and-go page.
 
-![MUF Muncher — hero row, band opening, and live POTA activity](screener1.png)
+Every 15 minutes, a small Python script pulls ionosonde readings for Dourbes (Belgium) and Juliusruh (Germany) plus a ticker of 8 more European stations, NOAA's solar flux, K-index, GOES X-ray flux and ACE solar wind speed, and live POTA spots across Europe — then renders a single self-contained HTML dashboard (no build step, no framework, no external JS at runtime) that answers one question: **is HF worth it right now, and where?**
+
+![MUF Muncher — hero row with the Space Weather glance tile, European ticker, and live POTA activity](MUF_Screener1.png)
 
 ---
 
@@ -48,13 +50,17 @@ The dashboard is a static snapshot regenerated on every run — schedule it with
 
 | Section | What it answers |
 |---|---|
-| **Hero row** | Current MUF(D) for each station + a green/yellow/gray chip per amateur band (20m–10m) estimating whether it's open right now |
+| **Hero row** | Current MUF(D) for each station + a green/yellow/gray chip per amateur band (20m–10m) estimating whether it's open right now, plus a square Space Weather glance tile (SFI/Kp/X-ray/wind, color-rated). All three tiles link down to their detail sections |
+| **European Ticker** | Current MUF(D) for 8 more GIRO ionosonde stations across Europe (Spain, UK, Italy ×2, Greece, Czechia, Hungary, Norway) as compact pill chips — coverage without the chart overhead |
 | **Global MUF Map** | One-click link out to [prop.kc2g.com](https://prop.kc2g.com)'s live, globally-interpolated MUF map |
-| **POTA Activity** | Live POTA activator spots across Europe on HF bands, band-colored using the *same* MUF-derived open/marginal/closed logic as the hero row — so you can see at a glance which live activations are actually reachable |
-| **Ionosonde detail** | foF2, MUF(D) and foEs charts for both stations, last 24h, with hover tooltips and a per-station legend toggle |
-| **Space Weather** | Solar Flux Index (10.7cm) and planetary K-index, the two numbers that explain *why* conditions look the way they do |
+| **POTA Activity** | Live POTA activator spots across Europe on HF bands, band-colored using the *same* MUF-derived open/marginal/closed logic as the hero row. Click a band or country chip to filter (multi-select), list caps at 7 rows with a "Show all" expander |
+| **Ionosonde detail** | foF2, MUF(D) and foEs charts for both hero stations, last 24h, with hover tooltips and a per-station legend toggle |
+| **Space Weather** | SFI, Kp (+ G-scale), GOES X-ray flux (+ flare class and R-scale), and ACE solar wind speed — each with its own tile, sparkline, and a color rating (good/marginal/critical) for HF conditions |
+| **Home screen ready** | A reload button and a manual pull-to-refresh gesture, since iOS strips native pull-to-refresh once the page is added to the home screen as a standalone web app |
 
-![MUF Muncher — MUF(D), foF2 and foEs charts with hover crosshair and legend toggle](screener2.png)
+![MUF Muncher — MUF(D), foF2 and foEs charts with hover crosshair and legend toggle](MUF_Screener2.png)
+
+![MUF Muncher — Space Weather tiles (SFI, Kp, X-ray, solar wind) with color ratings and Kp history](MUF_Screener3.png)
 
 ---
 
@@ -77,14 +83,14 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "Mozilla/5.0" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/1.0.0 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \
   --data-urlencode "toDate=2026/07/24 10:00:00"
 ```
 
-The `-A "Mozilla/5.0"` matters — the server behaves differently (or not at all) without a browser-like User-Agent. Response is a commented, whitespace-delimited text table:
+`muf.py` sends this same self-identifying `User-Agent` on every request to every source (GIRO, NOAA, POTA) rather than spoofing a browser — it turns out not to be required for a response, but it's the more transparent, identifiable way for an automated client to behave. Response is a commented, whitespace-delimited text table:
 
 ```
 # Global Ionospheric Radio Observatory (GIRO)
@@ -120,6 +126,30 @@ GET https://services.swpc.noaa.gov/json/f107_cm_flux.json
 ]
 ```
 
+```
+GET https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json
+```
+
+```json
+[
+  {"time_tag": "2026-07-27T18:13:00Z", "satellite": 18, "flux": 1.03e-06, "energy": "0.1-0.8nm"}
+]
+```
+
+Only the `"0.1-0.8nm"` (long-channel) entries are kept — that's the standard input for A/B/C/M/X flare classification and NOAA's R-scale (radio blackout) rating, both computed client-side in the dashboard from this raw flux.
+
+```
+GET https://services.swpc.noaa.gov/json/ace/swepam/ace_swepam_1h.json
+```
+
+```json
+[
+  {"time_tag": "2026-07-27T16:00:00", "dsflag": 0, "dens": 2.99, "speed": 401.27, "temperature": 22413.16}
+]
+```
+
+Rows with `dsflag != 0` (bad/interpolated readings) are dropped.
+
 ### 3. Live POTA activator spots
 
 ```
@@ -148,9 +178,12 @@ This one returns *every* current spot worldwide, on every band and mode — `muf
 
 ```
 muf.py (runs every 15 min via cron)
-  ├─ fetch_station()      → GIRO/DIDBase, per station, last 24h
+  ├─ fetch_station()      → GIRO/DIDBase, per hero station, last 24h
+  ├─ fetch_ticker_value()  → GIRO/DIDBase, per ticker station, latest MUF(D) only
   ├─ fetch_kindex()        → NOAA K-index
   ├─ fetch_sfi()            → NOAA solar flux
+  ├─ fetch_xray()           → NOAA / GOES X-ray flux, last 6h
+  ├─ fetch_solar_wind()     → NOAA / ACE SWEPAM solar wind speed, hourly
   ├─ fetch_pota_spots()      → POTA spots, filtered (Europe / HF / last 15min)
   │
   ├─ merge_and_prune()     → dedupe by timestamp against muf_data.json,
@@ -173,7 +206,7 @@ The dashboard itself (`dashboard_template.html`) is intentionally dependency-fre
 This was built for one specific use case — mid-Europe HF conditions — and several things are deliberately fixed rather than configurable yet:
 
 - **24h window, always.** `muf.py` requests exactly the last 24 hours from GIRO and NOAA on every run, merges it with whatever's already in `muf_data.json`, and **permanently discards anything older than 24h**. There's no way to keep a longer history or look further back without changing the code.
-- **Two hardcoded stations.** Dourbes (`DB049`) and Juliusruh (`JR055`) are set directly in `muf.py`'s `stations` dict — adding a third station means editing the script, not a config file.
+- **Two hardcoded hero stations, plus 8 hardcoded ticker stations.** Dourbes (`DB049`) and Juliusruh (`JR055`) are set directly in `muf.py`'s `stations` dict; the ticker's 8 additional European stations live in `TICKER_STATIONS`/`TICKER_COUNTRY`. Adding or swapping a station means editing the script, not a config file.
 - **POTA is hardcoded to Europe + 15 minutes + HF only.** The bounding box (`lat 34–72, lon -25–40`), the 15-minute recency cutoff, and the HF-only band filter (excluding 6m/VHF/UHF) are constants in `muf.py`, not parameters.
 - **Band-opening thresholds are fixed** to five bands (20m/17m/15m/12m/10m) with hand-picked representative frequencies — see `BANDS` in the template.
 
@@ -200,7 +233,7 @@ docker compose up -d --build
 | Source | What for | License / Terms |
 |---|---|---|
 | [Lowell GIRO Data Center (LGDC) / DIDBase](https://giro.uml.edu/didbase/) | Ionosonde-derived foF2, MUF(D), foEs | [CC BY-NC-SA 4.0](https://giro.uml.edu/didbase/RulesOfTheRoad.html) — **non-commercial only**, attribution required |
-| [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov/) | Solar flux index (SFI), planetary K-index | U.S. government work, public domain — attribution appreciated, no endorsement implied |
+| [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov/) | Solar flux index (SFI), planetary K-index, GOES X-ray flux, ACE solar wind speed | U.S. government work, public domain — attribution appreciated, no endorsement implied |
 | [POTA (Parks on the Air)](https://parksontheair.com/) | Live activator spots | No formal API terms of service found; the public API is served with permissive CORS (`Access-Control-Allow-Origin: *`), suggesting open third-party use is intended, but this isn't a substitute for an actual published policy |
 | [prop.kc2g.com](https://prop.kc2g.com) (KC2G) | Linked out to, not embedded/scraped | Not redistributed by this project — see their site directly for terms |
 

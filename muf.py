@@ -15,6 +15,13 @@ from datetime import datetime, timedelta, timezone
 
 import plotext as plt
 
+VERSION = "1.0.0"
+REPO_URL = "https://github.com/mooxle/Muf_Muncher"
+# Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
+# see this is an automated client (and how to reach the maintainer) rather
+# than spoofing a browser.
+USER_AGENT = f"MufMuncher/{VERSION} (+{REPO_URL})"
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # In the Docker container this is set to /data so output lands in the mounted
 # volume, separate from the script itself; locally it defaults next to muf.py.
@@ -92,9 +99,7 @@ def fetch_station(station):
     )
     url = f"https://lgdc.uml.edu/fastchar/getbest?{query}"
 
-    req = urllib.request.Request(
-        url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
-    )
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
 
     records = []
     with urllib.request.urlopen(req) as response:
@@ -128,9 +133,7 @@ def fetch_ticker_value(station):
         }
     )
     url = f"https://lgdc.uml.edu/fastchar/getbest?{query}"
-    req = urllib.request.Request(
-        url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
-    )
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req) as response:
         raw_data = response.read().decode("utf-8")
 
@@ -148,7 +151,7 @@ def fetch_ticker_value(station):
 
 def fetch_kindex():
     url = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req) as response:
         raw = json.loads(response.read().decode("utf-8"))
     records = []
@@ -160,7 +163,7 @@ def fetch_kindex():
 
 def fetch_sfi():
     url = "https://services.swpc.noaa.gov/json/f107_cm_flux.json"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req) as response:
         raw = json.loads(response.read().decode("utf-8"))
     records = []
@@ -175,7 +178,7 @@ def fetch_xray():
     A/B/C/M/X flare classification and NOAA's R-scale (radio blackout)
     rating, both computed client-side from this raw series."""
     url = "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req) as response:
         raw = json.loads(response.read().decode("utf-8"))
     records = []
@@ -191,7 +194,7 @@ def fetch_solar_wind():
     """Hourly bulk proton speed history from ACE SWEPAM - enough for a short
     sparkline, unlike the single-value real-time summary endpoint."""
     url = "https://services.swpc.noaa.gov/json/ace/swepam/ace_swepam_1h.json"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req) as response:
         raw = json.loads(response.read().decode("utf-8"))
     records = []
@@ -236,7 +239,7 @@ def khz_to_band(freq_khz):
 
 def fetch_pota_spots():
     url = "https://api.pota.app/spot/activator"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req) as response:
         raw = json.loads(response.read().decode("utf-8"))
 
@@ -313,7 +316,7 @@ def render_summary(store, stations, generated_at):
     """A small flat JSON, separate from muf_data.json's full 24h history, meant
     for dashboards like gethomepage/homepage whose custom-API widget maps fixed
     top-level fields - it can't index "the last item" of a variable-length array."""
-    summary = {"generatedAt": generated_at.strftime(ISO_FORM)}
+    summary = {"generatedAt": generated_at.strftime(ISO_FORM), "version": VERSION}
     for code, name in stations.items():
         records = store.get(code, {}).get("records", [])
         summary[name.lower()] = {
@@ -352,6 +355,7 @@ EXTRA_OUTPUT_PATHS = [
 def render_html(store, stations, generated_at, pota_spots, ticker_stations):
     payload = {
         "generatedAt": generated_at.strftime(ISO_FORM),
+        "version": VERSION,
         "stations": [
             {"code": code, "name": store[code]["name"], "records": store[code]["records"]}
             for code in stations
