@@ -364,4 +364,4 @@ Ullrich "Uz" von Bassewitz, [DF5WC](https://www.qrz.com/db/DF5WC), pointed out t
 
 ## Transparency
 
-The idea and concept behind this tool were conceived by **Max Sammet (DA6MAX)**. The code was generated with the assistance of [Claude](https://www.anthropic.com/claude) by Anthropic.
+The idea and concept behind this tool were conceived by **Max Sammet (DA6MAX)**. The code was generated with the assistance of [Claude](https://www.anthropic.com/claude) by Anthropic. The banner artwork was generated with [Google Gemini](https://gemini.google.com/).
