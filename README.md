@@ -65,7 +65,7 @@ The dashboard is a static snapshot regenerated on every run — schedule it with
 | **Global MUF Map** | One-click link out to [prop.kc2g.com](https://prop.kc2g.com)'s live, globally-interpolated MUF map |
 | **Activator Activity** | Live POTA *and* SOTA activator spots across Europe on HF bands, merged into one time-sorted list and band-colored using the *same* MUF-derived open/marginal/closed logic as the hero row. Click a network, band, or country chip to filter (multi-select), list caps at 7 rows with a "Show all" expander |
 | **Ionosonde detail** | foF2, MUF(D) and foEs charts for both hero stations, last 24h, with hover tooltips and a per-station legend toggle |
-| **Space Weather** | SFI, Kp (+ G-scale), GOES X-ray flux (+ flare class and R-scale), and ACE solar wind speed — each with its own tile, sparkline, and a color rating (good/marginal/critical) for HF conditions |
+| **Space Weather** | SFI, Kp (+ G-scale), GOES X-ray flux (+ flare class and R-scale), ACE solar wind speed, and daily sunspot number (SSN) — each with its own tile, sparkline, and a color rating (good/marginal/critical) for HF conditions |
 | **Home screen ready** | A reload button and a manual pull-to-refresh gesture, since iOS strips native pull-to-refresh once the page is added to the home screen as a standalone web app |
 
 ![MUF Muncher — MUF(D), foF2 and foEs charts with hover crosshair and legend toggle](MUF_Screener2.png)
@@ -160,6 +160,16 @@ GET https://services.swpc.noaa.gov/json/ace/swepam/ace_swepam_1h.json
 
 Rows with `dsflag != 0` (bad/interpolated readings) are dropped.
 
+```
+GET https://services.swpc.noaa.gov/text/daily-solar-indices.txt
+```
+
+```
+2026 07 27  147     89      660      1    -999      *   6  1  0  2  0  0  0
+```
+
+A plain-text table (`Date, Radio Flux 10.7cm, SESC Sunspot Number, ...`), one row per day. Unlike everything else on this page, sunspot number only updates once a day and "today" isn't final until the day is over - the freshest usable reading is typically for yesterday.
+
 ### 3. Live POTA activator spots
 
 ```
@@ -217,6 +227,7 @@ muf.py (runs every 15 min via cron)
   ├─ fetch_sfi()            → NOAA solar flux
   ├─ fetch_xray()           → NOAA / GOES X-ray flux, last 6h
   ├─ fetch_solar_wind()     → NOAA / ACE SWEPAM solar wind speed, hourly
+  ├─ fetch_ssn()             → NOAA/SESC sunspot number, daily, kept 30 days
   ├─ fetch_pota_spots()      → POTA spots, filtered (Europe / HF / last 15min)
   ├─ fetch_sota_spots()       → SOTA spots, filtered (Europe / HF / last 60min),
   │                            merged with POTA spots into one time-sorted list
@@ -244,7 +255,7 @@ The dashboard itself (`dashboard_template.html`) is intentionally dependency-fre
 
 This was built for one specific use case — mid-Europe HF conditions — and several things are deliberately fixed rather than configurable yet:
 
-- **24h window, always.** `muf.py` requests exactly the last 24 hours from GIRO and NOAA on every run, merges it with whatever's already in `muf_data.json`, and **permanently discards anything older than 24h**. There's no way to keep a longer history or look further back without changing the code.
+- **24h window, almost always.** `muf.py` requests the last 24 hours from GIRO and NOAA on every run, merges it with whatever's already in `muf_data.json`, and **permanently discards anything older than 24h** - with one exception: sunspot number (SSN) is a once-daily reading, so it's kept for 30 days instead (a 24h window would only ever hold a single point, no trend to show). There's no way to keep a longer history for the other metrics, or look further back, without changing the code.
 - **Two hardcoded hero stations, plus 8 hardcoded ticker stations.** Dourbes (`DB049`) and Juliusruh (`JR055`) are set directly in `muf.py`'s `stations` dict; the ticker's 8 additional European stations live in `TICKER_STATIONS`/`TICKER_COUNTRY`. Adding or swapping a station means editing the script, not a config file.
 - **POTA and SOTA are hardcoded to Europe + HF only, on different recency windows.** POTA uses a lat/lon bounding box (`lat 34–72, lon -25–40`) and a 15-minute cutoff; SOTA uses a hardcoded list of European `associationCode`s (`SOTA_EU_ASSOCIATIONS`) and a 60-minute cutoff, since summit spots stay "current" longer. Both share the same HF-only band filter (excluding 6m/VHF/UHF). None of this is a parameter yet.
 - **Band-opening thresholds are fixed** to five bands (20m/17m/15m/12m/10m) with hand-picked representative frequencies — see `BANDS` in the template.
@@ -272,7 +283,7 @@ docker compose up -d --build
 | Source | What for | License / Terms |
 |---|---|---|
 | [Lowell GIRO Data Center (LGDC) / DIDBase](https://giro.uml.edu/didbase/) | Ionosonde-derived foF2, MUF(D), foEs | [CC BY-NC-SA 4.0](https://giro.uml.edu/didbase/RulesOfTheRoad.html) — **non-commercial only**, attribution required |
-| [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov/) | Solar flux index (SFI), planetary K-index, GOES X-ray flux, ACE solar wind speed | U.S. government work, public domain — attribution appreciated, no endorsement implied |
+| [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov/) | Solar flux index (SFI), planetary K-index, GOES X-ray flux, ACE solar wind speed, daily sunspot number | U.S. government work, public domain — attribution appreciated, no endorsement implied |
 | [POTA (Parks on the Air)](https://parksontheair.com/) | Live activator spots | No formal API terms of service found; the public API is served with permissive CORS (`Access-Control-Allow-Origin: *`), suggesting open third-party use is intended, but this isn't a substitute for an actual published policy |
 | [SOTA (Summits on the Air)](https://www.sota.org.uk/) | Live activator spots, association list | No formal API terms of service found for `api-db2.sota.org.uk` specifically; sota.org.uk's general site terms apply to the website itself |
 | [prop.kc2g.com](https://prop.kc2g.com) (KC2G) | Linked out to, not embedded/scraped | Not redistributed by this project — see their site directly for terms |

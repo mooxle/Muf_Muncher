@@ -17,6 +17,10 @@
     --serious:  #ec835a;
     --critical: #d03b3b;
     --closed:   #c7c6c1;
+    --pota-bg:  #e1f3df;  /* pastel green - parks */
+    --pota-fg:  #227a3c;
+    --sota-bg:  #f5ecd8;  /* pastel ochre - summits/rock */
+    --sota-fg:  #8a5a1f;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
@@ -34,6 +38,10 @@
       --neutral-series:  #9a8ff0;
       --grid:           #2a2b2a;
       --closed:   #46453f;
+      --pota-bg:  #1c3322;
+      --pota-fg:  #7fd99a;
+      --sota-bg:  #362c19;
+      --sota-fg:  #e0b56b;
     }
   }
   :root[data-theme="dark"] {
@@ -51,6 +59,10 @@
     --neutral-series:  #9a8ff0;
     --grid:           #2a2b2a;
     --closed:   #46453f;
+    --pota-bg:  #1c3322;
+    --pota-fg:  #7fd99a;
+    --sota-bg:  #362c19;
+    --sota-fg:  #e0b56b;
   }
 
   * { box-sizing: border-box; }
@@ -139,7 +151,7 @@
   .hero-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
 
   .hero-sw-tile {
-    flex: 0 0 168px; aspect-ratio: 1; border-top-color: var(--neutral-series);
+    flex: 0 0 168px; aspect-ratio: 4 / 5; border-top-color: var(--neutral-series);
     padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px;
   }
   .hero-sw-tile .sw-title { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral-series); margin-bottom: 2px; }
@@ -238,7 +250,9 @@
   .pota-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
   .pota-row:last-child { border-bottom: none; }
   .pota-band { flex: none; }
-  .network-tag { flex: none; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px; }
+  .network-tag { flex: none; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; border: 1px solid transparent; border-radius: 4px; padding: 1px 4px; }
+  .network-tag.pota { background: var(--pota-bg); color: var(--pota-fg); }
+  .network-tag.sota { background: var(--sota-bg); color: var(--sota-fg); }
   .pota-call-wrap { display: flex; align-items: center; gap: 5px; flex: none; min-width: 92px; }
   .pota-profile-icon { display: flex; color: var(--text-muted); flex: none; }
   .pota-profile-icon:hover { color: var(--good); }

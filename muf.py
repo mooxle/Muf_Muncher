@@ -216,6 +216,42 @@ def fetch_solar_wind():
     return records
 
 
+# Sunspot number is fundamentally not a live metric like the others above -
+# it's a once-daily figure (NOAA/SESC), and even "today's" isn't final until
+# the day is over, so the freshest available reading is for yesterday.
+SSN_MAX_AGE = timedelta(days=30)
+
+
+def fetch_ssn():
+    """Daily SESC sunspot number from NOAA's plain-text daily solar data
+    product - the one metric here kept for 30 days rather than 24h, since
+    at one reading per day a 24h window would only ever hold a single
+    point (no trend to show in a sparkline)."""
+    url = "https://services.swpc.noaa.gov/text/daily-solar-indices.txt"
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req) as response:
+        raw = response.read().decode("utf-8")
+
+    records = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line or line.startswith(("#", ":")):
+            continue
+        parts = line.split()
+        if len(parts) < 5:
+            continue
+        try:
+            year, month, day = int(parts[0]), int(parts[1]), int(parts[2])
+            ssn = int(parts[4])
+        except ValueError:
+            continue
+        if ssn < 0:  # NOAA uses negative placeholders for missing data
+            continue
+        ts = datetime(year, month, day, tzinfo=timezone.utc)
+        records.append({"time": ts.strftime(ISO_FORM), "ssn": ssn})
+    return records
+
+
 # Rough bounding box covering mainland Europe, UK, Scandinavia, Iceland and
 # European Russia west of the Urals - good enough for "is this spot in Europe",
 # not meant to be a precise DXCC/continent boundary.
@@ -346,13 +382,15 @@ def fetch_sota_spots():
     return spots
 
 
-def merge_and_prune(existing_records, fresh_records):
-    """Dedup by timestamp, drop anything older than the 24h cutoff, sort by time."""
+def merge_and_prune(existing_records, fresh_records, prune_cutoff=None):
+    """Dedup by timestamp, drop anything older than cutoff (default: the
+    24h cutoff), sort by time."""
+    prune_cutoff = cutoff if prune_cutoff is None else prune_cutoff
     by_time = {r["time"]: r for r in existing_records}
     for r in fresh_records:
         by_time[r["time"]] = r
     return sorted(
-        (r for r in by_time.values() if datetime.strptime(r["time"], ISO_FORM).replace(tzinfo=timezone.utc) >= cutoff),
+        (r for r in by_time.values() if datetime.strptime(r["time"], ISO_FORM).replace(tzinfo=timezone.utc) >= prune_cutoff),
         key=lambda r: r["time"],
     )
 
@@ -518,6 +556,10 @@ try:
     indices["solarWind"] = merge_and_prune(indices.get("solarWind", []), fetch_solar_wind())
 except (urllib.error.URLError, urllib.error.HTTPError) as e:
     print(f"Failed to fetch solar wind speed: {e}")
+try:
+    indices["ssn"] = merge_and_prune(indices.get("ssn", []), fetch_ssn(), prune_cutoff=now - SSN_MAX_AGE)
+except (urllib.error.URLError, urllib.error.HTTPError) as e:
+    print(f"Failed to fetch sunspot number: {e}")
 store["_indices"] = indices
 
 print("Fetching POTA activator spots (Europe, HF, last 15min)...")
