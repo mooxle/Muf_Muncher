@@ -78,8 +78,8 @@
   }
   .stat-strip .stat-item { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
   .stat-strip .stat-sep { width: 1px; height: 13px; background: var(--border); flex: none; }
-  .stat-strip .version-link { color: var(--text-secondary); text-decoration: none; }
-  .stat-strip .version-link:hover { color: var(--text-primary); }
+  .version-link { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
+  .version-link:hover { color: var(--text-primary); }
   .coverage-note { font-size: 11px; color: var(--text-muted); margin: -6px 0 14px 2px; }
   .live-clock { text-align: right; font-family: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace; }
   .clock-utc { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--text-primary); letter-spacing: .01em; }
