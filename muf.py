@@ -223,6 +223,25 @@ EU_LAT_RANGE = (34.0, 72.0)
 EU_LON_RANGE = (-25.0, 40.0)
 POTA_MAX_AGE = timedelta(minutes=15)
 
+# SOTA associationCodes with continent "EU" per https://api-db2.sota.org.uk/api/associations -
+# hardcoded rather than fetched every run since the association list barely
+# ever changes, and it saves a request. Germany has two (Alpine + Low
+# Mountains); several countries are split into regional associations too
+# (Spain, France) - all still just "one country" for the entity filter.
+SOTA_EU_ASSOCIATIONS = {
+    "4O", "9A", "9H", "C3", "CT", "CU", "DL", "DM", "E7", "EA1", "EA2", "EA3",
+    "EA4", "EA5", "EA6", "EA7", "EI", "ER", "ES", "F", "FL", "G", "GD", "GI",
+    "GJ", "GM", "GU", "GW", "HA", "HB", "HB0", "I", "IS0", "JW", "JX", "LA",
+    "LX", "LY", "LZ", "OE", "OH", "OK", "OM", "ON", "OY", "OZ", "PA", "R3",
+    "R9U", "S5", "SM", "SP", "SV", "TF", "TK", "UT", "YL", "YO", "YU", "Z3",
+    "ZB2",
+}
+# SOTA spots stay "current" for longer than POTA's brisk 15-minute cadence
+# (an activator can sit on a summit and work stations for an hour+), so a
+# 15-minute window would make the SOTA side of the merged list look
+# artificially dead most of the time.
+SOTA_MAX_AGE = timedelta(minutes=60)
+
 # (band, low_kHz, high_kHz) - HF only, deliberately excludes 6m/VHF/UHF per
 # the "no VHF/UHF" requirement, and excludes 160m's LF-adjacent edge cases.
 HF_BANDS = [
@@ -271,9 +290,52 @@ def fetch_pota_spots():
 
         spots.append(
             {
+                "network": "POTA",
                 "activator": row.get("activator"),
                 "reference": row.get("reference"),
-                "parkName": row.get("name"),
+                "locationName": row.get("name"),
+                "band": band,
+                "mode": row.get("mode"),
+                "frequencyKHz": freq_khz,
+                "spotTime": spot_time.strftime(ISO_FORM),
+            }
+        )
+    spots.sort(key=lambda s: s["spotTime"], reverse=True)
+    return spots
+
+
+def fetch_sota_spots():
+    url = "https://api-db2.sota.org.uk/api/spots/-1/all"
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req) as response:
+        raw = json.loads(response.read().decode("utf-8"))
+
+    spots = []
+    for row in raw:
+        assoc = row.get("associationCode")
+        if assoc not in SOTA_EU_ASSOCIATIONS:
+            continue
+        try:
+            freq_khz = float(row["frequency"]) * 1000
+            spot_time = datetime.strptime(row["timeStamp"], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+        except (KeyError, TypeError, ValueError):
+            continue
+
+        if now - spot_time > SOTA_MAX_AGE:
+            continue
+        band = khz_to_band(freq_khz)
+        if band is None:
+            continue
+
+        summit_code = row.get("summitCode") or "?"
+        spots.append(
+            {
+                "network": "SOTA",
+                "activator": row.get("activatorCallsign"),
+                "reference": f"{assoc}/{summit_code}",
+                "associationCode": assoc,
+                "summitCode": summit_code,
+                "locationName": row.get("summitDetails"),
                 "band": band,
                 "mode": row.get("mode"),
                 "frequencyKHz": freq_khz,
@@ -367,7 +429,7 @@ EXTRA_OUTPUT_PATHS = [
 OUTPUT_DIRS = sorted({OUTPUT_DIR, *(os.path.dirname(p) for p in EXTRA_OUTPUT_PATHS)})
 
 
-def render_html(store, stations, generated_at, pota_spots, ticker_stations):
+def render_html(store, stations, generated_at, activator_spots, ticker_stations):
     payload = {
         "generatedAt": generated_at.strftime(ISO_FORM),
         "version": VERSION,
@@ -377,7 +439,7 @@ def render_html(store, stations, generated_at, pota_spots, ticker_stations):
             if code in store
         ],
         "indices": store.get("_indices", {"kindex": [], "sfi": []}),
-        "potaSpots": pota_spots,
+        "activatorSpots": activator_spots,
         "tickerStations": [
             {"code": code, "name": name, "country": TICKER_COUNTRY.get(code), **store["_ticker"][code]}
             for code, name in ticker_stations.items()
@@ -465,6 +527,15 @@ except urllib.error.URLError as e:
     print(f"Failed to fetch POTA spots: {e}")
     pota_spots = []
 
+print("Fetching SOTA activator spots (Europe, HF, last 60min)...")
+try:
+    sota_spots = fetch_sota_spots()
+except (urllib.error.URLError, urllib.error.HTTPError) as e:
+    print(f"Failed to fetch SOTA spots: {e}")
+    sota_spots = []
+
+activator_spots = sorted(pota_spots + sota_spots, key=lambda s: s["spotTime"], reverse=True)
+
 ticker = store.get("_ticker", {})
 for code, name in TICKER_STATIONS.items():
     print(f"Fetching ticker value for {name} ({code})...")
@@ -480,7 +551,7 @@ for code, name in TICKER_STATIONS.items():
 store["_ticker"] = ticker
 
 save_store(store)
-html_path = render_html(store, stations, now, pota_spots, TICKER_STATIONS)
+html_path = render_html(store, stations, now, activator_spots, TICKER_STATIONS)
 summary_path = render_summary(store, stations, now)
 print(f"Dashboard written to {html_path}")
 print(f"Summary written to {summary_path}")

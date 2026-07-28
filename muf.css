@@ -238,6 +238,7 @@
   .pota-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
   .pota-row:last-child { border-bottom: none; }
   .pota-band { flex: none; }
+  .network-tag { flex: none; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--text-muted); border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px; }
   .pota-call-wrap { display: flex; align-items: center; gap: 5px; flex: none; min-width: 92px; }
   .pota-profile-icon { display: flex; color: var(--text-muted); flex: none; }
   .pota-profile-icon:hover { color: var(--good); }
