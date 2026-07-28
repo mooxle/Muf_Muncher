@@ -1,0 +1,289 @@
+:root {
+    color-scheme: light;
+    --surface-0:      #f4f4f2;
+    --surface-1:      #fcfcfb;
+    --surface-2:      #ffffff;
+    --border:         #e4e3df;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #8a8983;
+    --series-1:       #2a78d6;  /* categorical slot 1: blue */
+    --series-2:       #eb6834;  /* categorical slot 2: orange */
+    --series-3:       #1baf7a;  /* categorical slot 3: aqua */
+    --neutral-series:  #7a6fd0;  /* single global series (SFI), not a station */
+    --grid:           #ececea;
+    --good:     #0ca30c;
+    --warning:  #fab219;
+    --serious:  #ec835a;
+    --critical: #d03b3b;
+    --closed:   #c7c6c1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-0:      #101110;
+      --surface-1:      #1a1b1a;
+      --surface-2:      #202120;
+      --border:         #303130;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #8d8c85;
+      --series-1:       #3987e5;
+      --series-2:       #d95926;
+      --series-3:       #199e70;
+      --neutral-series:  #9a8ff0;
+      --grid:           #2a2b2a;
+      --closed:   #46453f;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0:      #101110;
+    --surface-1:      #1a1b1a;
+    --surface-2:      #202120;
+    --border:         #303130;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #8d8c85;
+    --series-1:       #3987e5;
+    --series-2:       #d95926;
+    --series-3:       #199e70;
+    --neutral-series:  #9a8ff0;
+    --grid:           #2a2b2a;
+    --closed:   #46453f;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--surface-0);
+    font-family: -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--text-primary);
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 24px 20px 40px; }
+
+  .hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+  .hdr-title { display: flex; align-items: center; gap: 14px; }
+  .hdr .logo { border-radius: 13px; flex: none; }
+  .hdr h1 { font-size: 27px; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+  .hdr .tagline { font-size: 13.5px; color: var(--text-secondary); margin-top: 3px; }
+  .hdr-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+
+  /* Stat strip: the "is this thing alive, and covering what" facts, spread
+     across the full width instead of stacked small in the header corner. */
+  .stat-strip {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 20px;
+    font-size: 12.5px; color: var(--text-secondary);
+  }
+  .stat-strip .stat-item { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .stat-strip .stat-sep { width: 1px; height: 13px; background: var(--border); flex: none; }
+  .coverage-note { font-size: 11px; color: var(--text-muted); margin: -6px 0 14px 2px; }
+  .live-clock { text-align: right; font-family: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace; }
+  .clock-utc { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--text-primary); letter-spacing: .01em; }
+  .clock-date { font-size: 11px; font-weight: 500; color: var(--text-muted); letter-spacing: .03em; margin-top: 1px; font-family: -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif; }
+  .clock-local { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-muted); margin-top: 3px; }
+  .clock-tz { font-size: 0.68em; font-weight: 500; color: var(--text-muted); font-family: -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif; }
+  .clock-colon { animation: clock-blink 1s step-start infinite; }
+  @keyframes clock-blink { 50% { opacity: .3; } }
+  .data-updated { display: flex; align-items: center; gap: 5px; font-weight: 600; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .data-updated .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); flex: none; }
+
+  /* Reload: no browser chrome/pull-to-refresh once this is added to the iOS
+     home screen (standalone display-mode), so an explicit control is needed. */
+  .reload-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; padding: 0; margin-left: 2px;
+    border: none; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer;
+  }
+  .reload-btn:hover { color: var(--text-primary); background: var(--surface-2); }
+  .reload-btn svg { transition: transform .2s ease; }
+  .reload-btn.spinning svg { animation: reload-spin .6s linear infinite; }
+  @keyframes reload-spin { to { transform: rotate(360deg); } }
+
+  /* Pull-to-refresh: manually reproduces the gesture, since iOS standalone
+     web apps don't get Safari's native pull-to-refresh. */
+  .ptr-indicator {
+    position: fixed; top: 0; left: 50%; z-index: 1000;
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted);
+    box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    opacity: 0; pointer-events: none;
+    transform: translate(-50%, -46px);
+  }
+  .ptr-indicator.ready { color: var(--good); }
+  .ptr-indicator.refreshing svg { animation: reload-spin .6s linear infinite; }
+
+  /* Hero: the answer to "is HF worth it right now" - MUF(D) + band chips per
+     station, plus a square space-weather glance tile squeezed into the same
+     row. Flex (not grid) so the square tile can hold a fixed size while the
+     station cards share the rest of the width. */
+  .hero-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .hero-card, .hero-sw-tile {
+    background: var(--surface-1); border: 1px solid var(--border); border-top: 3px solid var(--hero-color, var(--series-1));
+    border-radius: 10px; transition: opacity .15s ease, border-color .15s ease;
+    text-decoration: none; color: inherit; cursor: pointer;
+  }
+  .hero-card:hover, .hero-sw-tile:hover { border-color: var(--hero-color, var(--neutral-series)); }
+  .hero-card { flex: 1 1 230px; padding: 14px 16px; }
+  .hero-card.dim { opacity: .35; }
+  .hero-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--hero-color, var(--text-primary)); margin-bottom: 2px; }
+  .hero-value-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .hero-value { font-size: 32px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .hero-unit { font-size: 12px; color: var(--text-muted); margin-left: 3px; font-weight: 500; }
+  .hero-sub { font-size: 10.5px; color: var(--text-muted); }
+  .hero-spark { margin-top: 6px; height: 24px; width: 100%; display: block; }
+  .hero-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+
+  .hero-sw-tile {
+    flex: 0 0 168px; aspect-ratio: 1; border-top-color: var(--neutral-series);
+    padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px;
+  }
+  .hero-sw-tile .sw-title { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral-series); margin-bottom: 2px; }
+  .hero-sw-tile .sw-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 12px; }
+  .hero-sw-tile .sw-row .k { color: var(--text-secondary); }
+  .hero-sw-tile .sw-row .v-badge {
+    display: inline-flex; align-items: baseline; gap: 4px; padding: 1px 7px; border-radius: 6px;
+    font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .hero-sw-tile .sw-row .v-badge .rating { font-size: 9.5px; font-weight: 700; opacity: .85; }
+  .band-legend-shared { display: flex; align-items: center; gap: 12px; font-size: 10.5px; color: var(--text-muted); flex-wrap: wrap; margin: 0 0 16px 2px; }
+  .band-legend-shared .item { display: flex; align-items: center; gap: 4px; }
+  .band-legend-shared .sw { width: 8px; height: 8px; border-radius: 3px; flex: none; }
+
+  /* Ticker: more European MUF(D) readings as small pill chips, no charts -
+     these stations only ever carry a single current value, never history. */
+  .ticker-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0 0 14px 2px; }
+  .ticker-row .ticker-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 650; font-size: 10px; margin-right: 2px; }
+  .ticker-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 10px; font-size: 11.5px; color: var(--text-primary); white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .ticker-chip .ticker-name { font-weight: 650; }
+  .ticker-chip .ticker-country { color: var(--text-muted); font-size: 10px; font-weight: 650; letter-spacing: .02em; }
+  .ticker-chip .ticker-value { color: var(--text-muted); }
+
+  /* Secondary metrics: same tile look, smaller/quieter - de-emphasized by design */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; transition: opacity .15s ease, border-color .15s ease; }
+  .tile.dim { opacity: .35; }
+  .tile .label { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
+  .tile .row { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; }
+  .tile .value { font-size: 16px; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tile .unit { font-size: 9.5px; color: var(--text-muted); margin-left: 2px; font-weight: 500; }
+  .tile .delta { font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .tile .delta.up { color: var(--good); }
+  .tile .delta.down { color: var(--critical); }
+  .tile .delta.flat { color: var(--text-muted); }
+  .tile .spark { margin-top: 5px; height: 16px; width: 100%; display: block; }
+  .tile.time .value { font-size: 14px; }
+
+  .section-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 650; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 8px; scroll-margin-top: 12px; }
+  .section-title:first-of-type { margin-top: 4px; }
+  .section-title svg { flex: none; }
+
+  .map-cta {
+    display: flex; align-items: center; gap: 10px; flex-wrap: baseline;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 9px;
+    padding: 9px 14px; margin-bottom: 14px; text-decoration: none; color: inherit;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .map-cta:hover { border-color: var(--neutral-series); background: var(--surface-2); }
+  .map-cta-icon { flex: none; color: var(--neutral-series); display: flex; }
+  .map-cta-title { font-size: 13px; font-weight: 650; color: var(--text-primary); white-space: nowrap; }
+  .map-cta-title .ext-arrow { color: var(--neutral-series); font-weight: 650; }
+  .map-cta-sub { font-size: 11.5px; color: var(--text-muted); }
+
+  .chart-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px 8px; margin-bottom: 14px; }
+  .chart-card .chead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; flex-wrap: wrap; gap: 8px; }
+  .chart-card h2 { font-size: 13px; font-weight: 650; margin: 0; }
+  .legend { display: flex; gap: 6px; flex-wrap: wrap; }
+  .legend button {
+    display: flex; align-items: center; gap: 6px; font: inherit; font-size: 11.5px; color: var(--text-secondary);
+    background: none; border: 1px solid transparent; border-radius: 6px; padding: 3px 8px; cursor: pointer;
+  }
+  .legend button:hover { background: var(--surface-2); border-color: var(--border); }
+  .legend button.hidden { opacity: .4; text-decoration: line-through; }
+  .legend .swatch { width: 14px; height: 2px; border-radius: 1px; flex: none; }
+
+  .chart-wrap { position: relative; }
+  svg.chart { width: 100%; height: 190px; display: block; overflow: visible; touch-action: none; cursor: crosshair; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .axis-label { fill: var(--text-muted); font-size: 10px; }
+  .series-line { fill: none; stroke-width: 2; transition: opacity .15s ease; }
+  .series-line.hidden { opacity: 0; }
+  .crosshair { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 2; opacity: .6; }
+  .hover-dot { r: 3.5; stroke: var(--surface-1); stroke-width: 2; }
+  .hoverlayer { opacity: 0; transition: opacity .1s ease; pointer-events: none; }
+  .hoverlayer.show { opacity: 1; }
+  .tooltip-box { fill: var(--surface-2); stroke: var(--border); rx: 6; }
+  .tooltip-text { font-size: 10.5px; fill: var(--text-secondary); }
+  .tooltip-text.strong { fill: var(--text-primary); font-weight: 650; }
+  .overlay-rect { fill: transparent; }
+
+  /* Band opening chips, now shown inline inside each hero card */
+  .band-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 32px; padding: 3px 7px; border-radius: 999px;
+    font-size: 10px; font-weight: 650; color: #ffffff;
+  }
+  .disclaimer { font-size: 10.5px; color: var(--text-muted); margin-top: 10px; }
+
+  /* POTA activator list */
+  .pota-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .pota-row:last-child { border-bottom: none; }
+  .pota-band { flex: none; }
+  .pota-call-wrap { display: flex; align-items: center; gap: 5px; flex: none; min-width: 92px; }
+  .pota-profile-icon { display: flex; color: var(--text-muted); flex: none; }
+  .pota-profile-icon:hover { color: var(--good); }
+  .pota-call { font-weight: 650; color: inherit; text-decoration: none; }
+  .pota-call:hover { text-decoration: underline; }
+  .pota-park { color: var(--text-secondary); flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pota-park .ref { color: var(--text-primary); font-weight: 600; text-decoration: none; }
+  .pota-park .ref:hover { text-decoration: underline; }
+  .pota-meta { flex: none; color: var(--text-muted); font-size: 11px; text-align: right; white-space: nowrap; }
+  .pota-empty { color: var(--text-muted); font-size: 12.5px; padding: 8px 0; }
+
+  /* Filters: click a band/entity to narrow the list to just that selection
+     (multiple selections within a group OR together); empty selection shows
+     everything. Inclusion-style, unlike the exclusion-style chart legends
+     above - filtering a list and toggling a chart series are different
+     enough tasks to warrant different interactions. */
+  .pota-filters { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+  .pota-filters button {
+    display: flex; align-items: center; gap: 5px; font: inherit; font-size: 11px; color: var(--text-secondary);
+    background: none; border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; cursor: pointer;
+  }
+  .pota-filters button:hover { background: var(--surface-2); }
+  .pota-filters button.active { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
+  .pota-filters .pota-filter-sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 2px; }
+
+  .pota-showmore {
+    display: block; width: 100%; margin-top: 4px; padding: 7px 0; text-align: center;
+    font: inherit; font-size: 12px; font-weight: 650; color: var(--text-secondary);
+    background: none; border: none; border-top: 1px solid var(--border); cursor: pointer;
+  }
+  .pota-showmore:hover { color: var(--text-primary); }
+  .pota-showmore.hidden { display: none; }
+
+  .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 10.5px; color: var(--text-muted); flex-wrap: wrap; gap: 6px; }
+  .foot a { color: var(--text-muted); }
+  .credit { margin-top: 4px; font-size: 10.5px; color: var(--text-muted); }
+  .credit a { color: var(--text-muted); }
+
+  .loading-state { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 40vh; color: var(--text-muted); font-size: 13px; }
+  .loading-state .spin { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--neutral-series); border-radius: 50%; animation: reload-spin .7s linear infinite; }
+  .error-state { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 40vh; color: var(--text-secondary); font-size: 13px; text-align: center; padding: 0 20px; }
+  .error-state button {
+    font: inherit; font-size: 12.5px; font-weight: 650; color: var(--text-primary);
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; cursor: pointer;
+  }
+  .error-state button:hover { background: var(--surface-2); }
+
+  @media (max-width: 700px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .hero-sw-tile { flex-basis: 100%; aspect-ratio: auto; }
+  }

@@ -7,6 +7,7 @@ __pycache__/
 dashboard.html
 index.html
 muf_data.json
+muf_payload.json
 summary.json
 muf/
 

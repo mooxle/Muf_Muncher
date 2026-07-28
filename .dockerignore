@@ -6,5 +6,6 @@
 !dashboard_template.html
 !requirements.txt
 !mufmuncher-icon.png
+!muf.css
 !entrypoint.sh
 !muf-cron

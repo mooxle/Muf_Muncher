@@ -8,7 +8,7 @@
 
 > A self-hosted HF propagation dashboard for mid-Europe hams — MUF(D), foF2 and Sporadic-E from ten European ionosondes, full NOAA space weather (SFI, Kp, X-ray, solar wind), and live POTA activator spots, all cross-referenced into one glance-and-go page.
 
-Every 15 minutes, a small Python script pulls ionosonde readings for Dourbes (Belgium) and Juliusruh (Germany) plus a ticker of 8 more European stations, NOAA's solar flux, K-index, GOES X-ray flux and ACE solar wind speed, and live POTA spots across Europe — then renders a single self-contained HTML dashboard (no build step, no framework, no external JS at runtime) that answers one question: **is HF worth it right now, and where?**
+Every 15 minutes, a small Python script pulls ionosonde readings for Dourbes (Belgium) and Juliusruh (Germany) plus a ticker of 8 more European stations, NOAA's solar flux, K-index, GOES X-ray flux and ACE solar wind speed, and live POTA spots across Europe — then renders a dependency-free HTML dashboard (no build step, no framework, no external JS at runtime) that answers one question: **is HF worth it right now, and where?**
 
 ![MUF Muncher — hero row with the Space Weather glance tile, European ticker, and live POTA activity](MUF_Screener1.png)
 
@@ -30,10 +30,20 @@ pip install -r requirements.txt
 python3 muf.py
 ```
 
-This fetches fresh data, writes `dashboard.html` next to the script, and (if you're running it in a real terminal) also prints an ASCII version of the charts straight to your console via [plotext](https://github.com/piccolomo/plotext).
+This fetches fresh data, writes `dashboard.html` (plus `muf.css`, `mufmuncher-icon.png`, and `muf_payload.json` next to it — see [How It Works](#-how-it-works)), and (if you're running it in a real terminal) also prints an ASCII version of the charts straight to your console via [plotext](https://github.com/piccolomo/plotext).
+
+The page fetches its data payload at load time, so opening `dashboard.html` directly from disk (`file://`) won't work — `fetch()` is blocked cross-origin for local files in every major browser. Serve the directory instead:
 
 ```bash
-open dashboard.html   # macOS
+python3 -m http.server 8080
+open http://localhost:8080/dashboard.html   # macOS
+```
+
+Prefer double-click-to-open over running a local server? Set `MUF_INLINE_PAYLOAD=1` and `muf.py` embeds the data directly in `dashboard.html` instead, so `file://` works again — at the cost of the reload-caching benefit described below.
+
+```bash
+MUF_INLINE_PAYLOAD=1 python3 muf.py
+open dashboard.html   # macOS - works now, no server needed
 ```
 
 ### 3. Run it on a schedule
@@ -188,14 +198,18 @@ muf.py (runs every 15 min via cron)
   │
   ├─ merge_and_prune()     → dedupe by timestamp against muf_data.json,
   │                           drop anything older than 24h
-  ├─ render_html()          → injects the merged JSON into dashboard_template.html
-  │                           as a single `const DATA = {...}` in a <script> tag
+  ├─ render_html()          → copies dashboard_template.html verbatim to dashboard.html
+  │                           (+ index.html, muf/index.html), writes the merged JSON to
+  │                           muf_payload.json, and copies muf.css + mufmuncher-icon.png
+  │                           alongside every one of them
   └─ render_summary()       → a small flat summary.json (latest values only),
                               for external dashboards (e.g. gethomepage/homepage)
                               that can't index "the last item" of a variable-length array
 ```
 
-The dashboard itself (`dashboard_template.html`) is intentionally dependency-free: no charting library, no npm, no build step. All the SVG line charts, the hover crosshair, the legend toggle, and the K-index bar chart are ~400 lines of vanilla JS drawing directly into `<svg>` elements. The data is embedded inline at generation time, so the page works completely offline once loaded and needs no server-side logic beyond serving static files.
+The dashboard itself (`dashboard_template.html`) is intentionally dependency-free: no charting library, no npm, no build step. All the SVG line charts, the hover crosshair, the legend toggle, and the KPI tiles are vanilla JS drawing directly into `<svg>` elements.
+
+**Static vs. dynamic, and why they're split into separate files:** `muf.css` and `mufmuncher-icon.png` never change between runs, so they're real static files the browser caches normally across reloads - earlier versions inlined both directly into the HTML (the icon alone, base64-encoded, was ~30KB and ended up embedded three times over via a template placeholder, since it's referenced by the favicon, apple-touch-icon, and header logo - all from one page's markup, not even across reloads). `muf_payload.json` *does* change every cron cycle, so it's still re-fetched every load, but keeping it as its own file (rather than inlined as `const DATA = {...}`) means a browser reload within the same 15-minute window can still get a `304 Not Modified` instead of re-transferring the full payload - and the reload button / pull-to-refresh gesture make that a common case. The one trade-off: the page now needs a `fetch()` at load time, so it must be served over `http(s)://`, not opened directly via `file://` (see [Quick Start](#-quick-start) for the `MUF_INLINE_PAYLOAD=1` escape hatch if you want `file://` back).
 
 `muf_data.json` (the full 24h history) and `summary.json` (latest-values-only) are both written alongside the HTML, so you can point other tools at either depending on whether you need the history or just the current numbers.
 
@@ -223,7 +237,7 @@ docker compose up -d --build
 ```
 
 - `entrypoint.sh` runs `muf.py` once immediately (so the dashboard isn't empty on first start), then starts cron (`muf-cron`, every 15 min) and the file server in one process.
-- Output goes to `/data` (a named volume), which the file server serves directly — `dashboard.html`, `index.html`, `muf_data.json`, and `summary.json` all end up there.
+- Output goes to `/data` (a named volume), which the file server serves directly — `dashboard.html`, `index.html`, `muf.css`, `mufmuncher-icon.png`, `muf_payload.json`, `muf_data.json`, and `summary.json` all end up there.
 - If you put a reverse proxy in front (nginx, Nginx Proxy Manager, Caddy, ...) for TLS/auth, make sure whatever proxies `/your-path/` also forwards the exact sub-paths unstripped or stripped consistently — `muf.py` writes duplicate copies to a `muf/` subdirectory specifically to survive either proxy behavior without guessing wrong.
 
 ---

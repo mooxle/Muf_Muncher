@@ -1,6 +1,8 @@
-import base64
+#!/usr/bin/python3
+
 import json
 import os
+import shutil
 import sys
 import time as _time
 
@@ -27,6 +29,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # volume, separate from the script itself; locally it defaults next to muf.py.
 OUTPUT_DIR = os.environ.get("MUF_OUTPUT_DIR", SCRIPT_DIR)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Off by default: the page fetches muf_payload.json at load time, which needs
+# an http(s):// server (fetch() is blocked cross-origin for file://). Set
+# this to also embed the payload inline so opening dashboard.html directly
+# from disk still works - at the cost of the "304 on an unchanged reload"
+# caching benefit the external file gets served over a real server.
+INLINE_PAYLOAD = os.environ.get("MUF_INLINE_PAYLOAD", "").lower() in ("1", "true", "yes")
 
 JSON_PATH = os.path.join(OUTPUT_DIR, "muf_data.json")
 ISO_FORM = "%Y-%m-%dT%H:%M:%SZ"
@@ -340,7 +349,9 @@ def render_summary(store, stations, generated_at):
 
 HTML_TEMPLATE_PATH = os.path.join(SCRIPT_DIR, "dashboard_template.html")
 ICON_PATH = os.path.join(SCRIPT_DIR, "mufmuncher-icon.png")
+CSS_PATH = os.path.join(SCRIPT_DIR, "muf.css")
 HTML_OUTPUT_PATH = os.path.join(OUTPUT_DIR, "dashboard.html")
+PAYLOAD_FILENAME = "muf_payload.json"
 # Written to every one of these paths so the page loads correctly regardless
 # of whether a reverse proxy in front strips its location prefix or not:
 #   /              -> index.html
@@ -350,6 +361,10 @@ EXTRA_OUTPUT_PATHS = [
     os.path.join(OUTPUT_DIR, "index.html"),
     os.path.join(OUTPUT_DIR, "muf", "index.html"),
 ]
+# muf.css, mufmuncher-icon.png and muf_payload.json are referenced by plain
+# relative filenames in the template, so each needs a copy alongside every
+# HTML output above - same reverse-proxy reasoning as EXTRA_OUTPUT_PATHS.
+OUTPUT_DIRS = sorted({OUTPUT_DIR, *(os.path.dirname(p) for p in EXTRA_OUTPUT_PATHS)})
 
 
 def render_html(store, stations, generated_at, pota_spots, ticker_stations):
@@ -370,16 +385,28 @@ def render_html(store, stations, generated_at, pota_spots, ticker_stations):
         ],
     }
     with open(HTML_TEMPLATE_PATH) as f:
-        template = f.read()
-    with open(ICON_PATH, "rb") as f:
-        icon_b64 = "data:image/png;base64," + base64.b64encode(f.read()).decode("ascii")
-    html = template.replace("__MUF_DATA_JSON__", json.dumps(payload)).replace("__MUF_MUNCHER_ICON__", icon_b64)
+        html = f.read()
+    # "</" -> "<\/" so a POTA park name or callsign containing "</script>"
+    # (unlikely, but it's externally-sourced data) can't break out of the tag.
+    inline_json = json.dumps(payload).replace("</", "<\\/") if INLINE_PAYLOAD else ""
+    inline_tag = f"<script>window.__MUF_PAYLOAD__ = {inline_json};</script>" if INLINE_PAYLOAD else ""
+    html = html.replace("<!-- __MUF_INLINE_PAYLOAD__ -->", inline_tag)
     with open(HTML_OUTPUT_PATH, "w") as f:
         f.write(html)
     for path in EXTRA_OUTPUT_PATHS:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
             f.write(html)
+    for out_dir in OUTPUT_DIRS:
+        os.makedirs(out_dir, exist_ok=True)
+        for src in (ICON_PATH, CSS_PATH):
+            dst = os.path.join(out_dir, os.path.basename(src))
+            # Same file when OUTPUT_DIR defaults to SCRIPT_DIR (no
+            # MUF_OUTPUT_DIR set) - nothing to copy in that case.
+            if os.path.abspath(src) != os.path.abspath(dst):
+                shutil.copy(src, dst)
+        with open(os.path.join(out_dir, PAYLOAD_FILENAME), "w") as f:
+            json.dump(payload, f)
     return HTML_OUTPUT_PATH
 
 
