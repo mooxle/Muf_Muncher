@@ -86,18 +86,28 @@
   /* Banner artwork is flat white (no transparency), so it only reads
      correctly on a light background - swap back to the icon+wordmark
      markup (theme-aware via CSS custom properties) once dark mode kicks
-     in, rather than shipping a second banner asset. */
-  .hdr-banner { display: block; height: 64px; width: auto; }
+     in, rather than shipping a second banner asset. The card wrapper
+     (same surface/border/radius as every other tile) makes the white
+     canvas read as a deliberate card instead of a clashing edge. */
+  .hdr-banner-wrap {
+    display: inline-flex; align-items: center;
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 14px;
+  }
+  .hdr-banner { display: block; height: 88px; width: auto; }
   .hdr-fallback-logo, .hdr-fallback-text { display: none; }
   @media (prefers-color-scheme: dark) {
-    :root:where(:not([data-theme="light"])) .hdr-banner { display: none; }
+    :root:where(:not([data-theme="light"])) .hdr-banner-wrap { display: none; }
     :root:where(:not([data-theme="light"])) .hdr-fallback-logo,
     :root:where(:not([data-theme="light"])) .hdr-fallback-text { display: block; }
   }
-  :root[data-theme="dark"] .hdr-banner { display: none; }
+  :root[data-theme="dark"] .hdr-banner-wrap { display: none; }
   :root[data-theme="dark"] .hdr-fallback-logo,
   :root[data-theme="dark"] .hdr-fallback-text { display: block; }
-  @media (max-width: 480px) { .hdr-banner { height: 50px; } }
+  @media (max-width: 480px) {
+    .hdr-banner-wrap { padding: 6px 10px; }
+    .hdr-banner { height: 60px; }
+  }
 
   /* Stat strip: the "is this thing alive, and covering what" facts, spread
      across the full width instead of stacked small in the header corner. */

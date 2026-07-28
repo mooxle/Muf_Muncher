@@ -14,12 +14,16 @@ Every 15 minutes, a small Python script pulls ionosonde readings for Dourbes (Be
 
 ## Desktop &amp; Mobile
 
-One template, no separate mobile build: the hero row and KPI grid reflow into a single column under 700px, and the reload button doubles as a manual pull-to-refresh once the page is added to the iOS home screen (see [Home screen ready](#what-it-shows) below).
+One template, no separate mobile build: the hero row and KPI grid reflow into a single column under 700px, and the reload button doubles as a manual pull-to-refresh once the page is added to the iOS home screen (see [Home screen ready](#what-it-shows) below). Click either preview for the full-length screenshot.
 
 <table>
 <tr>
-<td width="65%" valign="top"><img src="MUF_Desktop.png" alt="MUF Muncher on desktop — hero row, activator activity and ionosonde charts side by side"></td>
-<td width="35%" valign="top"><img src="MUF_Mobile.png" alt="MUF Muncher on mobile — the same sections stacked into a single scrolling column"></td>
+<td width="70%" valign="top">
+  <a href="MUF_Desktop.png"><img src="MUF_Desktop_thumb.png" width="100%" alt="MUF Muncher on desktop — hero row and Space Weather glance tile"></a>
+</td>
+<td width="30%" valign="top">
+  <a href="MUF_Mobile.png"><img src="MUF_Mobile_thumb.png" width="100%" alt="MUF Muncher on mobile — the same sections stacked into a single column"></a>
+</td>
 </tr>
 </table>
 
