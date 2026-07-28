@@ -21,6 +21,8 @@
     --pota-fg:  #227a3c;
     --sota-bg:  #f5ecd8;  /* pastel ochre - summits/rock */
     --sota-fg:  #8a5a1f;
+    --font-sans: -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
@@ -69,7 +71,7 @@
   body {
     margin: 0;
     background: var(--surface-0);
-    font-family: -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+    font-family: var(--font-sans);
     color: var(--text-primary);
   }
   .page { max-width: 1080px; margin: 0 auto; padding: 24px 20px 40px; }
@@ -77,9 +79,25 @@
   .hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
   .hdr-title { display: flex; align-items: center; gap: 14px; }
   .hdr .logo { border-radius: 13px; flex: none; }
-  .hdr h1 { font-size: 27px; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+  .hdr h1 { font-family: var(--font-mono); font-size: 22px; font-weight: 600; margin: 0; letter-spacing: .05em; text-transform: uppercase; }
   .hdr .tagline { font-size: 13.5px; color: var(--text-secondary); margin-top: 3px; }
   .hdr-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+
+  /* Banner artwork is flat white (no transparency), so it only reads
+     correctly on a light background - swap back to the icon+wordmark
+     markup (theme-aware via CSS custom properties) once dark mode kicks
+     in, rather than shipping a second banner asset. */
+  .hdr-banner { display: block; height: 64px; width: auto; }
+  .hdr-fallback-logo, .hdr-fallback-text { display: none; }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .hdr-banner { display: none; }
+    :root:where(:not([data-theme="light"])) .hdr-fallback-logo,
+    :root:where(:not([data-theme="light"])) .hdr-fallback-text { display: block; }
+  }
+  :root[data-theme="dark"] .hdr-banner { display: none; }
+  :root[data-theme="dark"] .hdr-fallback-logo,
+  :root[data-theme="dark"] .hdr-fallback-text { display: block; }
+  @media (max-width: 480px) { .hdr-banner { height: 50px; } }
 
   /* Stat strip: the "is this thing alive, and covering what" facts, spread
      across the full width instead of stacked small in the header corner. */
@@ -93,11 +111,11 @@
   .version-link { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
   .version-link:hover { color: var(--text-primary); }
   .coverage-note { font-size: 11px; color: var(--text-muted); margin: -6px 0 14px 2px; }
-  .live-clock { text-align: right; font-family: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace; }
+  .live-clock { text-align: right; font-family: var(--font-mono); }
   .clock-utc { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--text-primary); letter-spacing: .01em; }
-  .clock-date { font-size: 11px; font-weight: 500; color: var(--text-muted); letter-spacing: .03em; margin-top: 1px; font-family: -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif; }
+  .clock-date { font-size: 11px; font-weight: 500; color: var(--text-muted); letter-spacing: .03em; margin-top: 1px; font-family: var(--font-sans); }
   .clock-local { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-muted); margin-top: 3px; }
-  .clock-tz { font-size: 0.68em; font-weight: 500; color: var(--text-muted); font-family: -apple-system, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif; }
+  .clock-tz { font-size: 0.68em; font-weight: 500; color: var(--text-muted); font-family: var(--font-sans); }
   .clock-colon { animation: clock-blink 1s step-start infinite; }
   @keyframes clock-blink { 50% { opacity: .3; } }
   .data-updated { display: flex; align-items: center; gap: 5px; font-weight: 600; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
@@ -142,9 +160,9 @@
   .hero-card:hover, .hero-sw-tile:hover { border-color: var(--hero-color, var(--neutral-series)); }
   .hero-card { flex: 1 1 230px; padding: 12px 16px; }
   .hero-card.dim { opacity: .35; }
-  .hero-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--hero-color, var(--text-primary)); margin-bottom: 2px; }
+  .hero-name { font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--hero-color, var(--text-primary)); margin-bottom: 2px; }
   .hero-value-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-  .hero-value { font-size: 32px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .hero-value { font-family: var(--font-mono); font-size: 32px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
   .hero-unit { font-size: 12px; color: var(--text-muted); margin-left: 3px; font-weight: 500; }
   .hero-sub { font-size: 10.5px; color: var(--text-muted); }
   .hero-spark { margin-top: 4px; height: 22px; width: 100%; display: block; }
@@ -154,7 +172,7 @@
     flex: 0 0 168px; border-top-color: var(--neutral-series);
     padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
   }
-  .hero-sw-tile .sw-title { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral-series); margin-bottom: 2px; }
+  .hero-sw-tile .sw-title { display: flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral-series); margin-bottom: 2px; }
   .hero-sw-tile .sw-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 12px; }
   .hero-sw-tile .sw-row .k { color: var(--text-secondary); }
   .hero-sw-tile .sw-row .v-badge {
@@ -169,14 +187,14 @@
   /* Ticker: more European MUF(D) readings as small pill chips, no charts -
      these stations only ever carry a single current value, never history. */
   .ticker-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0 0 14px 2px; }
-  .ticker-row .ticker-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 650; font-size: 10px; margin-right: 2px; }
+  .ticker-row .ticker-label { font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 650; font-size: 10px; margin-right: 2px; }
   .ticker-chip {
     display: inline-flex; align-items: center; gap: 6px;
     background: var(--surface-1); border: 1px solid var(--border); border-radius: 999px;
     padding: 4px 10px; font-size: 11.5px; color: var(--text-primary); white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
-  .ticker-chip .ticker-name { font-weight: 650; }
+  .ticker-chip .ticker-name { font-family: var(--font-mono); font-weight: 650; }
   .ticker-chip .ticker-country { color: var(--text-muted); font-size: 10px; font-weight: 650; letter-spacing: .02em; }
   .ticker-chip .ticker-value { color: var(--text-muted); }
 
@@ -184,9 +202,9 @@
   .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 8px; margin-bottom: 16px; }
   .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; transition: opacity .15s ease, border-color .15s ease; }
   .tile.dim { opacity: .35; }
-  .tile .label { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
+  .tile .label { font-family: var(--font-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
   .tile .row { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; }
-  .tile .value { font-size: 16px; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tile .value { font-family: var(--font-mono); font-size: 16px; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
   .tile .unit { font-size: 9.5px; color: var(--text-muted); margin-left: 2px; font-weight: 500; }
   .tile .delta { font-size: 10px; font-weight: 600; white-space: nowrap; }
   .tile .delta.up { color: var(--good); }
@@ -195,7 +213,7 @@
   .tile .spark { margin-top: 5px; height: 16px; width: 100%; display: block; }
   .tile.time .value { font-size: 14px; }
 
-  .section-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 650; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 8px; scroll-margin-top: 12px; }
+  .section-title { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 13px; font-weight: 650; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 8px; scroll-margin-top: 12px; }
   .section-title:first-of-type { margin-top: 4px; }
   .section-title svg { flex: none; }
 
@@ -242,7 +260,7 @@
   .band-chip {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 32px; padding: 3px 7px; border-radius: 999px;
-    font-size: 10px; font-weight: 650; color: #ffffff;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 650; color: #ffffff;
   }
   .disclaimer { font-size: 10.5px; color: var(--text-muted); margin-top: 10px; }
 
@@ -250,7 +268,7 @@
   .pota-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
   .pota-row:last-child { border-bottom: none; }
   .pota-band { flex: none; }
-  .network-tag { flex: none; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; border: 1px solid transparent; border-radius: 4px; padding: 1px 4px; }
+  .network-tag { flex: none; font-family: var(--font-mono); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; border: 1px solid transparent; border-radius: 4px; padding: 1px 4px; }
   .network-tag.pota { background: var(--pota-bg); color: var(--pota-fg); }
   .network-tag.sota { background: var(--sota-bg); color: var(--sota-fg); }
   .pota-call-wrap { display: flex; align-items: center; gap: 5px; flex: none; min-width: 92px; }
