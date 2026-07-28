@@ -133,26 +133,26 @@
      station, plus a square space-weather glance tile squeezed into the same
      row. Flex (not grid) so the square tile can hold a fixed size while the
      station cards share the rest of the width. */
-  .hero-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .hero-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
   .hero-card, .hero-sw-tile {
     background: var(--surface-1); border: 1px solid var(--border); border-top: 3px solid var(--hero-color, var(--series-1));
     border-radius: 10px; transition: opacity .15s ease, border-color .15s ease;
     text-decoration: none; color: inherit; cursor: pointer;
   }
   .hero-card:hover, .hero-sw-tile:hover { border-color: var(--hero-color, var(--neutral-series)); }
-  .hero-card { flex: 1 1 230px; padding: 14px 16px; }
+  .hero-card { flex: 1 1 230px; padding: 12px 16px; }
   .hero-card.dim { opacity: .35; }
   .hero-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--hero-color, var(--text-primary)); margin-bottom: 2px; }
   .hero-value-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
   .hero-value { font-size: 32px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
   .hero-unit { font-size: 12px; color: var(--text-muted); margin-left: 3px; font-weight: 500; }
   .hero-sub { font-size: 10.5px; color: var(--text-muted); }
-  .hero-spark { margin-top: 6px; height: 24px; width: 100%; display: block; }
-  .hero-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  .hero-spark { margin-top: 4px; height: 22px; width: 100%; display: block; }
+  .hero-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
 
   .hero-sw-tile {
-    flex: 0 0 168px; aspect-ratio: 4 / 5; border-top-color: var(--neutral-series);
-    padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px;
+    flex: 0 0 168px; border-top-color: var(--neutral-series);
+    padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
   }
   .hero-sw-tile .sw-title { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral-series); margin-bottom: 2px; }
   .hero-sw-tile .sw-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 12px; }
@@ -302,5 +302,5 @@
 
   @media (max-width: 700px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
-    .hero-sw-tile { flex-basis: 100%; aspect-ratio: auto; }
+    .hero-sw-tile { flex-basis: 100%; }
   }
