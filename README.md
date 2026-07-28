@@ -4,7 +4,7 @@
 
 <h1 align="center">MUF Muncher</h1>
 
-<p align="center"><strong>v1.0.0</strong></p>
+<p align="center"><strong>v1.0.0</strong> &middot; <a href="https://github.com/mooxle/Muf_Muncher">GitHub</a></p>
 
 > A self-hosted HF propagation dashboard for mid-Europe hams — MUF(D), foF2 and Sporadic-E from ten European ionosondes, full NOAA space weather (SFI, Kp, X-ray, solar wind), and live POTA activator spots, all cross-referenced into one glance-and-go page.
 
@@ -294,7 +294,11 @@ That's the entire runtime dependency list — everything else (HTTP requests, JS
 
 ---
 
-## 73 de DA6MAX
+## 73 de [DA6MAX](https://www.qrz.com/db/DA6MAX)
+
+<p align="center">
+  <a href="https://www.qrz.com/db/DA6MAX"><img src="https://cdn-bio.qrz.com/x/da6max/DA6MX_QSL.jpg" alt="DA6MAX QSL card" width="320"></a>
+</p>
 
 *Built to answer one question every morning: is it worth turning the radio on?*
 
