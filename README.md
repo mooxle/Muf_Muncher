@@ -389,6 +389,8 @@ That's the entire runtime dependency list — everything else (HTTP requests, JS
 
 Ullrich "Uz" von Bassewitz, [DF5WC](https://www.qrz.com/db/DF5WC), pointed out the shebang line and suggested splitting the static assets from the data payload for proper browser caching (see [How It Works](#how-it-works)) — both are in here because of that.
 
+Ivar Nygård, [LB8VA](https://www.qrz.com/db/LB8VA), reported that `muf.py` crashed immediately on Windows (`time.tzset()` isn't available there) — fixed in v1.2.1.
+
 ---
 
 ## Transparency
