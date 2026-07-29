@@ -110,7 +110,7 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "MufMuncher/1.2.0 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/1.2.1 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \
@@ -350,6 +350,11 @@ That's the entire runtime dependency list — everything else (HTTP requests, JS
 ---
 
 ## Changelog
+
+### [1.2.1] - 2026-07-29
+#### Fixed
+- `muf.py` crashed immediately on Windows: `time.tzset()` (used to force UTC so plotext's terminal chart date axis lines up with the UTC timestamps fed into it) doesn't exist there — it's Unix-only. Guarded the call so it's a no-op on Windows instead of an `AttributeError`; the terminal chart's date labels can be off by the local UTC offset there as a result, everything else (JSON/HTML/summary output) is unaffected.
+- The K-index, SFI, X-ray and solar wind NOAA fetches only caught `URLError`/`HTTPError`, not `json.JSONDecodeError` — a malformed/duplicated JSON response from NOAA (observed in practice, transient) crashed the whole run instead of just skipping that one metric for this cycle, same class of bug v1.1.1 already fixed for the GIRO station fetches.
 
 ### [1.2.0] - 2026-07-29
 #### Added

@@ -7,9 +7,13 @@ import sys
 import time as _time
 
 # Force UTC so plotext's date axis (which uses local-time fromtimestamp
-# internally) lines up with the UTC timestamps we feed it.
+# internally) lines up with the UTC timestamps we feed it. tzset() is
+# Unix-only (no-op guard here); on Windows there's no equivalent process-wide
+# override, so the terminal chart's axis labels can be off by the local UTC
+# offset there - the JSON/HTML/summary output is unaffected either way.
 os.environ["TZ"] = "UTC"
-_time.tzset()
+if hasattr(_time, "tzset"):
+    _time.tzset()
 
 import urllib.parse
 import urllib.request
@@ -17,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 import plotext as plt
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
@@ -547,11 +551,11 @@ print("Fetching space weather indices (NOAA SWPC)...")
 indices = store.get("_indices", {"kindex": [], "sfi": []})
 try:
     indices["kindex"] = merge_and_prune(indices.get("kindex", []), fetch_kindex())
-except urllib.error.URLError as e:
+except (urllib.error.URLError, json.JSONDecodeError) as e:
     print(f"Failed to fetch K-index: {e}")
 try:
     indices["sfi"] = merge_and_prune(indices.get("sfi", []), fetch_sfi())
-except urllib.error.URLError as e:
+except (urllib.error.URLError, json.JSONDecodeError) as e:
     print(f"Failed to fetch SFI: {e}")
 # xray/solarWind used to store a single latest-reading dict rather than a
 # history list; discard any leftover dict from that older format instead of
@@ -563,11 +567,11 @@ if not isinstance(indices.get("solarWind"), list):
 
 try:
     indices["xray"] = merge_and_prune(indices.get("xray", []), fetch_xray())
-except (urllib.error.URLError, urllib.error.HTTPError) as e:
+except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as e:
     print(f"Failed to fetch X-ray flux: {e}")
 try:
     indices["solarWind"] = merge_and_prune(indices.get("solarWind", []), fetch_solar_wind())
-except (urllib.error.URLError, urllib.error.HTTPError) as e:
+except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as e:
     print(f"Failed to fetch solar wind speed: {e}")
 try:
     indices["ssn"] = merge_and_prune(indices.get("ssn", []), fetch_ssn(), prune_cutoff=now - SSN_MAX_AGE)
