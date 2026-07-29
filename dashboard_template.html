@@ -20,13 +20,24 @@
 <div class="page" id="page" style="display:none;">
   <div class="hdr">
     <div class="hdr-title">
-      <div class="hdr-banner-wrap"><img class="hdr-banner" src="mufmuncher-banner.png" alt="MUF Muncher &mdash; Is HF worth it right now, and where?"></div>
-      <img class="logo hdr-fallback-logo" src="mufmuncher-icon.png" alt="MUF Muncher logo" width="56" height="56">
-      <div class="hdr-fallback-text">
+      <div class="hdr-halo" aria-hidden="true"></div>
+      <img class="hdr-llama" src="mufmuncher-llama.png" alt="" aria-hidden="true">
+      <div>
         <h1>MUF Muncher</h1>
-        <div class="tagline">Is HF worth it right now &mdash; and where?</div>
+        <img class="hdr-wave" src="mufmuncher-wave.png" alt="" aria-hidden="true">
+        <div class="tagline" id="tagline">Is HF worth it right now &mdash; and where?</div>
       </div>
     </div>
+    <script>
+      // Wave divider has no natural relationship to the tagline's text
+      // width, so it's matched up at runtime rather than guessing a
+      // fixed px value that would drift if the tagline copy ever changes.
+      (function () {
+        var tagline = document.getElementById('tagline');
+        var wave = document.querySelector('.hdr-wave');
+        if (tagline && wave) wave.style.width = tagline.getBoundingClientRect().width + 'px';
+      })();
+    </script>
     <div class="hdr-right">
       <div class="live-clock">
         <div class="clock-utc"><span id="utcClock">--:--:--</span> <span class="clock-tz">UTC</span></div>
@@ -832,7 +843,7 @@ function buildPotaRow(spot) {
   const { bg, fg } = potaBandColor(spot.band);
   const isSota = spot.network === 'SOTA';
   const row = document.createElement('div');
-  row.className = 'pota-row';
+  row.className = 'pota-row ' + spot.network.toLowerCase();
   row.innerHTML = `
     <span class="band-chip pota-band" style="background:${bg};color:${fg}" title="${spot.band} vs. current MUF(D)">${spot.band}</span>
     <span class="network-tag ${spot.network.toLowerCase()}">${spot.network}</span>

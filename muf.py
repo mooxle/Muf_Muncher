@@ -456,7 +456,8 @@ def render_summary(store, stations, generated_at):
 
 HTML_TEMPLATE_PATH = os.path.join(SCRIPT_DIR, "dashboard_template.html")
 ICON_PATH = os.path.join(SCRIPT_DIR, "mufmuncher-icon.png")
-BANNER_PATH = os.path.join(SCRIPT_DIR, "mufmuncher-banner.png")
+LLAMA_PATH = os.path.join(SCRIPT_DIR, "mufmuncher-llama.png")
+WAVE_PATH = os.path.join(SCRIPT_DIR, "mufmuncher-wave.png")
 CSS_PATH = os.path.join(SCRIPT_DIR, "muf.css")
 HTML_OUTPUT_PATH = os.path.join(OUTPUT_DIR, "dashboard.html")
 PAYLOAD_FILENAME = "muf_payload.json"
@@ -507,7 +508,7 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations)
             f.write(html)
     for out_dir in OUTPUT_DIRS:
         os.makedirs(out_dir, exist_ok=True)
-        for src in (ICON_PATH, BANNER_PATH, CSS_PATH):
+        for src in (ICON_PATH, LLAMA_PATH, WAVE_PATH, CSS_PATH):
             dst = os.path.join(out_dir, os.path.basename(src))
             # Same file when OUTPUT_DIR defaults to SCRIPT_DIR (no
             # MUF_OUTPUT_DIR set) - nothing to copy in that case.

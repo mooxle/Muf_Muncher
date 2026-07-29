@@ -9,7 +9,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY muf.py dashboard_template.html mufmuncher-icon.png mufmuncher-banner.png muf.css ./
+COPY muf.py dashboard_template.html mufmuncher-icon.png mufmuncher-llama.png mufmuncher-wave.png muf.css ./
 
 COPY muf-cron /etc/cron.d/muf-cron
 RUN chmod 0644 /etc/cron.d/muf-cron

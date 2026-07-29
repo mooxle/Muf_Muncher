@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="mufmuncher-banner.png" width="640" alt="MUF Muncher — Is HF worth it right now, and where?">
+  <img src="mufmuncher-header-hero.png" width="500" alt="MUF Muncher — Is HF worth it right now, and where?">
 </p>
 
 <p align="center"><strong>v1.1.1</strong> &middot; <a href="https://github.com/mooxle/Muf_Muncher">GitHub</a></p>
@@ -252,7 +252,7 @@ muf.py (runs every 15 min via cron)
   ├─ render_html()          → copies dashboard_template.html verbatim to dashboard.html
   │                           (+ index.html, muf/index.html), writes the merged JSON to
   │                           muf_payload.json, and copies muf.css + mufmuncher-icon.png +
-  │                           mufmuncher-banner.png alongside every one of them
+  │                           mufmuncher-llama.png + mufmuncher-wave.png alongside every one of them
   └─ render_summary()       → a small flat summary.json (latest values only),
                               for external dashboards (e.g. gethomepage/homepage)
                               that can't index "the last item" of a variable-length array
@@ -260,7 +260,7 @@ muf.py (runs every 15 min via cron)
 
 The dashboard itself (`dashboard_template.html`) is intentionally dependency-free: no charting library, no npm, no build step. All the SVG line charts, the hover crosshair, the legend toggle, and the KPI tiles are vanilla JS drawing directly into `<svg>` elements.
 
-**Static vs. dynamic, and why they're split into separate files:** `muf.css`, `mufmuncher-icon.png` and `mufmuncher-banner.png` never change between runs, so they're real static files the browser caches normally across reloads - earlier versions inlined the icon directly into the HTML (base64-encoded, ~30KB, and ended up embedded three times over via a template placeholder, since it's referenced by the favicon, apple-touch-icon, and header logo - all from one page's markup, not even across reloads). The banner replaces the icon+wordmark as the header logo in light mode; since it's a flat white asset with no transparency, dark mode (`prefers-color-scheme`) swaps back to the icon and CSS-drawn wordmark instead of shipping a second banner image. `muf_payload.json` *does* change every cron cycle, so it's still re-fetched every load, but keeping it as its own file (rather than inlined as `const DATA = {...}`) means a browser reload within the same 15-minute window can still get a `304 Not Modified` instead of re-transferring the full payload - and the reload button / pull-to-refresh gesture make that a common case. The one trade-off: the page now needs a `fetch()` at load time, so it must be served over `http(s)://`, not opened directly via `file://` (see [Quick Start](#quick-start) for the `MUF_INLINE_PAYLOAD=1` escape hatch if you want `file://` back).
+**Static vs. dynamic, and why they're split into separate files:** `muf.css`, `mufmuncher-icon.png`, `mufmuncher-llama.png` and `mufmuncher-wave.png` never change between runs, so they're real static files the browser caches normally across reloads - earlier versions inlined the icon directly into the HTML (base64-encoded, ~30KB, and ended up embedded three times over via a template placeholder, since it's referenced by the favicon, apple-touch-icon, and header logo - all from one page's markup, not even across reloads). The header logo is line art (a llama outline + a waveform divider) processed down to pure black strokes on a transparent background, so a single `filter: invert(1)` in dark mode is enough to make it read on both themes - no second asset needed. `muf_payload.json` *does* change every cron cycle, so it's still re-fetched every load, but keeping it as its own file (rather than inlined as `const DATA = {...}`) means a browser reload within the same 15-minute window can still get a `304 Not Modified` instead of re-transferring the full payload - and the reload button / pull-to-refresh gesture make that a common case. The one trade-off: the page now needs a `fetch()` at load time, so it must be served over `http(s)://`, not opened directly via `file://` (see [Quick Start](#quick-start) for the `MUF_INLINE_PAYLOAD=1` escape hatch if you want `file://` back).
 
 `muf_data.json` (the full 24h history) and `summary.json` (latest-values-only) are both written alongside the HTML, so you can point other tools at either depending on whether you need the history or just the current numbers.
 
@@ -288,7 +288,7 @@ docker compose up -d --build
 ```
 
 - `entrypoint.sh` runs `muf.py` once immediately (so the dashboard isn't empty on first start), then starts cron (`muf-cron`, every 15 min) and the file server in one process.
-- Output goes to `/data` (a named volume), which the file server serves directly — `dashboard.html`, `index.html`, `muf.css`, `mufmuncher-icon.png`, `mufmuncher-banner.png`, `muf_payload.json`, `muf_data.json`, and `summary.json` all end up there.
+- Output goes to `/data` (a named volume), which the file server serves directly — `dashboard.html`, `index.html`, `muf.css`, `mufmuncher-icon.png`, `mufmuncher-llama.png`, `mufmuncher-wave.png`, `muf_payload.json`, `muf_data.json`, and `summary.json` all end up there.
 - If you put a reverse proxy in front (nginx, Nginx Proxy Manager, Caddy, ...) for TLS/auth, make sure whatever proxies `/your-path/` also forwards the exact sub-paths unstripped or stripped consistently — `muf.py` writes duplicate copies to a `muf/` subdirectory specifically to survive either proxy behavior without guessing wrong.
 
 ---
@@ -370,4 +370,4 @@ Ullrich "Uz" von Bassewitz, [DF5WC](https://www.qrz.com/db/DF5WC), pointed out t
 
 ## Transparency
 
-The idea and concept behind this tool were conceived by **Max Sammet (DA6MAX)**. The code was generated with the assistance of [Claude](https://www.anthropic.com/claude) by Anthropic. The banner artwork was generated with [Google Gemini](https://gemini.google.com/).
+The idea and concept behind this tool were conceived by **Max Sammet (DA6MAX)**. The code was generated with the assistance of [Claude](https://www.anthropic.com/claude) by Anthropic. The header logo artwork (llama icon and waveform) was generated with [Google Gemini](https://gemini.google.com/).
