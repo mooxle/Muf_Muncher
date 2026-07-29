@@ -22,6 +22,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Ensure output directory exists
+        run: mkdir -p dist
+
+      # Each run starts from a clean checkout with no history - muf.py
+      # merges fresh fetches into whatever load_store() finds on disk, so
+      # without this, a single failed/rate-limited station fetch would
+      # wipe that station's chart instead of just skipping new points.
+      # key always misses (run_id is unique) so restore always falls back
+      # to the most recent muf-data- entry; a fresh cache is saved after
+      # this run's dist/muf_data.json is written, for the next run to find.
+      - name: Restore station history cache
+        uses: actions/cache@v4
+        with:
+          path: dist/muf_data.json
+          key: muf-data-${{ github.run_id }}
+          restore-keys: |
+            muf-data-
+
       - name: Run muf.py
         env:
           MUF_OUTPUT_DIR: dist

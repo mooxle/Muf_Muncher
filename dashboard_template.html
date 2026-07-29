@@ -839,10 +839,19 @@ const POTA_BAND_ORDER = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m'
 function buildPotaRow(spot) {
   const { bg, fg } = potaBandColor(spot.band);
   const isSota = spot.network === 'SOTA';
+  // Only 20-10m get a color: MUF(D) is an upper bound (is F2 skip possible
+  // at all), not a lower bound - it says nothing about D-layer absorption
+  // or the LUF, which are what actually govern whether 40m/80m/etc. are
+  // usable. Coloring those bands off MUF(D) alone would show "open"
+  // almost permanently, which would be actively misleading rather than
+  // just imprecise.
+  const bandTitle = BAND_FREQ[spot.band] != null
+    ? `${spot.band} vs. current MUF(D)`
+    : `${spot.band}: not color-coded - MUF(D) is only an upper limit for F2 skip, it doesn't capture the absorption/LUF that actually governs lower bands`;
   const row = document.createElement('div');
   row.className = 'pota-row ' + spot.network.toLowerCase();
   row.innerHTML = `
-    <span class="band-chip pota-band" style="background:${bg};color:${fg}" title="${spot.band} vs. current MUF(D)">${spot.band}</span>
+    <span class="band-chip pota-band" style="background:${bg};color:${fg}" title="${bandTitle}">${spot.band}</span>
     <span class="network-tag ${spot.network.toLowerCase()}">${spot.network}</span>
     <span class="pota-call-wrap">
       ${isSota ? '' : `<a class="pota-profile-icon" target="_blank" rel="noopener noreferrer" title="POTA.app profile">

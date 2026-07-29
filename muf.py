@@ -541,6 +541,7 @@ for station, name in stations.items():
     muf = [r["muf"] for r in pruned]
     foEs = [r["foEs"] for r in pruned]
     data[name] = (times, fof2, muf, foEs)
+    _time.sleep(0.75)  # spread out GIRO/lgdc.uml.edu requests, avoid tripping its rate limiter
 
 print("Fetching space weather indices (NOAA SWPC)...")
 indices = store.get("_indices", {"kindex": [], "sfi": []})
@@ -602,6 +603,7 @@ for code, name in TICKER_STATIONS.items():
         ticker[code] = latest
     # else: keep whatever value (if any) is already in the store, so a
     # transient failure shows the last known reading instead of nothing.
+    _time.sleep(0.75)  # spread out GIRO/lgdc.uml.edu requests, avoid tripping its rate limiter
 store["_ticker"] = ticker
 
 save_store(store)

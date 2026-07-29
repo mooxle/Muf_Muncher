@@ -334,6 +334,7 @@ Not intended for:
 
 - **Gap handling isn't "any missing sample = break the line."** A single missed autoscaling pass (common during Sporadic-E) doesn't fragment the chart — only a real time gap (>20 min) between two valid readings starts a new line segment. Applies identically to the web dashboard and the terminal chart.
 - **Band-opening chips are a rough estimate**, not a propagation prediction: `MUF(D) ≥ band edge × 1.05` → open, `≥ × 0.85` → marginal, else closed. It's a single-station-overhead heuristic, not a path-specific forecast.
+- **Only 20m-10m get a color; 40m/80m/etc. in the Activator Activity list show a neutral gray chip on purpose.** MUF(D) is an *upper bound* — it tells you the highest frequency that can still skip off the F2 layer, not the lowest. For 20-10m that's the actually-limiting number most of the time. For 40m/80m the MUF(D) values in this dataset (typically 10-30 MHz) sit far above the band, so the same "MUF ≥ band edge" logic would read "open" almost permanently, regardless of real conditions — the real limiting factors down there (D-layer absorption, LUF) aren't captured by MUF(D) at all. Showing a color there would be actively misleading rather than just imprecise, so those bands stay uncolored instead (hover the chip for the same explanation inline).
 - **The QRZ/POTA.app links use a best-effort callsign parser** (strips `/P`, `/M`, `/MM`, `/AM`, `/QRP`, picks the longer half of prefix/call compounds like `LA/DC6ST` → `DC6ST`). Covers the common cases; unusual callsign formats can still slip through.
 
 ---
