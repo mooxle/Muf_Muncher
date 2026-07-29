@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 
 import plotext as plt
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
@@ -118,7 +118,14 @@ def fetch_station(station):
         if line.startswith("#") or not line.strip():
             continue
         parts = line.split()
-        ts = datetime.strptime(parts[0], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+        if len(parts) < 7:
+            print(f"Skipping unparsable line from {station}: {line!r}")
+            continue
+        try:
+            ts = datetime.strptime(parts[0], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+        except ValueError:
+            print(f"Skipping unparsable timestamp from {station}: {line!r}")
+            continue
         records.append(
             {
                 "time": ts.strftime(ISO_FORM),
@@ -520,6 +527,9 @@ for station, name in stations.items():
         fresh_records = fetch_station(station)
     except urllib.error.HTTPError as e:
         print(f"HTTP Error {e.code}: {e.reason} for {name}")
+        fresh_records = []
+    except Exception as e:
+        print(f"Unexpected error fetching {name} ({station}): {e}")
         fresh_records = []
 
     pruned = merge_and_prune(store.get(station, {}).get("records", []), fresh_records)

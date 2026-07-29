@@ -2,7 +2,7 @@
   <img src="mufmuncher-banner.png" width="640" alt="MUF Muncher — Is HF worth it right now, and where?">
 </p>
 
-<p align="center"><strong>v1.1.0</strong> &middot; <a href="https://github.com/mooxle/Muf_Muncher">GitHub</a></p>
+<p align="center"><strong>v1.1.1</strong> &middot; <a href="https://github.com/mooxle/Muf_Muncher">GitHub</a></p>
 
 > A self-hosted HF propagation dashboard for mid-Europe hams — MUF(D), foF2 and Sporadic-E from ten European ionosondes, full NOAA space weather (SFI, Kp, X-ray, solar wind), and live POTA activator spots, all cross-referenced into one glance-and-go page.
 
@@ -345,6 +345,12 @@ plotext
 That's the entire runtime dependency list — everything else (HTTP requests, JSON, datetime handling) is Python standard library.
 
 ---
+
+## Changelog
+
+### [1.1.1] - 2026-07-29
+#### Fixed
+- Gracefully handle malformed or error responses from ionosonde station APIs (e.g. rate-limiting or maintenance blackouts) instead of crashing the entire fetch/deploy run. A single failed station now logs a warning and is skipped; the run continues normally with the remaining stations.
 
 ## 73 de [DA6MAX](https://www.qrz.com/db/DA6MAX)
 
