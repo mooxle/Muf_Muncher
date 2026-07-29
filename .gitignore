@@ -19,3 +19,8 @@ mufmuncher2.png
 
 # OS cruft
 .DS_Store
+
+# Local process notes for Claude Code - versioned privately in the
+# muf-muncher-notes repo instead, kept out of both GitHub and Forgejo here
+# on purpose (see CLAUDE.md itself for why).
+CLAUDE.md
