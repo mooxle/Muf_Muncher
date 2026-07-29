@@ -129,7 +129,7 @@
   .version-link:hover { color: var(--text-primary); }
   .coverage-note { font-size: 11px; color: var(--text-muted); margin: -6px 0 14px 2px; }
   .live-clock { text-align: right; font-family: var(--font-mono); }
-  .clock-utc { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--text-primary); letter-spacing: .01em; }
+  .clock-utc { font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text-secondary); letter-spacing: .01em; }
   .clock-date { font-size: 11px; font-weight: 500; color: var(--text-muted); letter-spacing: .03em; margin-top: 1px; font-family: var(--font-sans); }
   .clock-local { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-muted); margin-top: 3px; }
   .clock-tz { font-size: 0.68em; font-weight: 500; color: var(--text-muted); font-family: var(--font-sans); }

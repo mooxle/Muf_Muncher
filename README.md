@@ -110,14 +110,14 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "MufMuncher/1.1.0 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/1.2.0 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \
   --data-urlencode "toDate=2026/07/24 10:00:00"
 ```
 
-`muf.py` sends this same self-identifying `User-Agent` on every request to every source (GIRO, NOAA, POTA) rather than spoofing a browser — it turns out not to be required for a response, but it's the more transparent, identifiable way for an automated client to behave. Response is a commented, whitespace-delimited text table:
+`muf.py` sends this same self-identifying `User-Agent` on every request to every source (GIRO, NOAA, POTA) rather than spoofing a browser — it turns out not to be required for a response, but it's the more transparent, identifiable way for an automated client to behave. Requests to GIRO specifically (the two hero stations plus 8 ticker stations, all against `lgdc.uml.edu`) are also spaced out by ~750ms each, since a fast burst of 10 requests from the same IP occasionally gets rate-limited (`HTTP 429`) — observed in practice from GitHub Actions' shared runner IP ranges more than from a home connection. Response is a commented, whitespace-delimited text table:
 
 ```
 # Global Ionospheric Radio Observatory (GIRO)
@@ -350,6 +350,21 @@ That's the entire runtime dependency list — everything else (HTTP requests, JS
 ---
 
 ## Changelog
+
+### [1.2.0] - 2026-07-29
+#### Added
+- An explanation (hover tooltip on the gray chip, plus a note here in the README) for why only 20-10m get an open/marginal/closed color in Activator Activity — MUF(D) is an upper bound, so applying the same logic to 40m/80m would read "open" almost permanently regardless of real conditions.
+
+#### Changed
+- New header identity: the flat banner image is replaced by a line-art llama + waveform logo (transparent, CSS-inverted for dark mode instead of a second asset) next to a thin, wide-tracked wordmark in a warm accent color, with a soft radial glow behind it.
+- The header clock is smaller and lighter than before, so the logo reads as the primary visual anchor instead of competing with it.
+- GIRO/lgdc.uml.edu requests are now spaced out (~750ms apart) instead of firing back-to-back, to make the `HTTP 429`s below less likely in the first place.
+
+#### Fixed
+- GitHub Actions runs now persist the last known station history across runs (`actions/cache`) — previously, every run started from a clean checkout with no local store, so a single rate-limited fetch on CI wiped that station's entire chart instead of just skipping new points.
+- The header's waveform divider was invisible in production: its width was measured while the page was still in its initial `display:none` loading state, which always computes to 0. Moved the measurement to after the page is actually revealed.
+- A badly-cropped, asymmetric header screenshot in the README.
+- Screenshot links in the README 404'd when viewed on Forgejo: a raw HTML `<a href="relative.png">` isn't rewritten to a working path by its markdown renderer (unlike `<img src>`, which is) — switched to standard Markdown `[![]()]()` link syntax, which resolves correctly on both GitHub and Forgejo.
 
 ### [1.1.1] - 2026-07-29
 #### Fixed
