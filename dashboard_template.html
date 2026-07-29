@@ -28,16 +28,6 @@
         <div class="tagline" id="tagline">Is HF worth it right now &mdash; and where?</div>
       </div>
     </div>
-    <script>
-      // Wave divider has no natural relationship to the tagline's text
-      // width, so it's matched up at runtime rather than guessing a
-      // fixed px value that would drift if the tagline copy ever changes.
-      (function () {
-        var tagline = document.getElementById('tagline');
-        var wave = document.querySelector('.hdr-wave');
-        if (tagline && wave) wave.style.width = tagline.getBoundingClientRect().width + 'px';
-      })();
-    </script>
     <div class="hdr-right">
       <div class="live-clock">
         <div class="clock-utc"><span id="utcClock">--:--:--</span> <span class="clock-tz">UTC</span></div>
@@ -216,6 +206,13 @@ reloadBtn.addEventListener('click', () => {
   }
   loadingEl.style.display = 'none';
   pageEl.style.display = '';
+
+  // Wave divider has no natural relationship to the tagline's text width,
+  // so it's matched up here (now that #page is actually visible and has
+  // real layout) rather than guessing a fixed px value.
+  const taglineEl = document.getElementById('tagline');
+  const waveEl = document.querySelector('.hdr-wave');
+  if (taglineEl && waveEl) waveEl.style.width = taglineEl.getBoundingClientRect().width + 'px';
 
 const PALETTE = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)'];
 const hiddenKeys = new Set();

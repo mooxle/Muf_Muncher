@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="mufmuncher-header-hero.png" width="500" alt="MUF Muncher — Is HF worth it right now, and where?">
+  <img src="mufmuncher-header-hero.png" width="380" alt="MUF Muncher — Is HF worth it right now, and where?">
 </p>
 
-<p align="center"><strong>v1.1.1</strong> &middot; <a href="https://github.com/mooxle/Muf_Muncher">GitHub</a></p>
+<p align="center"><a href="https://github.com/mooxle/Muf_Muncher">GitHub</a></p>
 
 > A self-hosted HF propagation dashboard for mid-Europe hams — MUF(D), foF2 and Sporadic-E from ten European ionosondes, full NOAA space weather (SFI, Kp, X-ray, solar wind), and live POTA activator spots, all cross-referenced into one glance-and-go page.
 
@@ -19,10 +19,14 @@ One template, no separate mobile build: the hero row and KPI grid reflow into a 
 <table>
 <tr>
 <td width="70%" valign="top">
-  <a href="MUF_Desktop.png"><img src="MUF_Desktop_thumb.png" width="100%" alt="MUF Muncher on desktop — hero row and Space Weather glance tile"></a>
+
+[![MUF Muncher on desktop — hero row and Space Weather glance tile](MUF_Desktop_thumb.png)](MUF_Desktop.png)
+
 </td>
 <td width="30%" valign="top">
-  <a href="MUF_Mobile.png"><img src="MUF_Mobile_thumb.png" width="100%" alt="MUF Muncher on mobile — the same sections stacked into a single column"></a>
+
+[![MUF Muncher on mobile — the same sections stacked into a single column](MUF_Mobile_thumb.png)](MUF_Mobile.png)
+
 </td>
 </tr>
 </table>
