@@ -2,6 +2,10 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.3.0] - 2026-07-30
+### Added
+- "Update available" indicator: `muf.py` checks GitHub's latest release tag during the cron fetch/render cycle and bakes a `latestVersion` field into `summary.json` and the HTML payload (falls back to the last known value in the store if the GitHub check fails, same pattern as the other external fetches). The dashboard header shows a small badge next to the current version number when `latestVersion` is newer — a plain client-side string compare, no runtime network call to GitHub.
+
 ## [1.2.1] - 2026-07-29
 ### Fixed
 - `muf.py` crashed immediately on Windows: `time.tzset()` (used to force UTC so plotext's terminal chart date axis lines up with the UTC timestamps fed into it) doesn't exist there — it's Unix-only. Guarded the call so it's a no-op on Windows instead of an `AttributeError`; the terminal chart's date labels can be off by the local UTC offset there as a result, everything else (JSON/HTML/summary output) is unaffected.
