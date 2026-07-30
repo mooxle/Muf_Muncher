@@ -6,6 +6,7 @@ All notable changes to MUF Muncher are documented here.
 ### Added
 - "Update available" indicator: `muf.py` checks GitHub's latest release tag during the cron fetch/render cycle and bakes a `latestVersion` field into `summary.json` and the HTML payload (falls back to the last known value in the store if the GitHub check fails, same pattern as the other external fetches). The dashboard header shows a small badge next to the current version number when `latestVersion` is newer — a plain client-side string compare, no runtime network call to GitHub.
 - Dark mode toggle in the header: an explicit light/dark choice, persisted in `localStorage` and applied via `data-theme` (set as early as possible in `<head>`, before the stylesheet paints, so a returning visitor's choice never flashes back to the system default first). Until the user picks one, `prefers-color-scheme` keeps deciding, same as before.
+- Mode filter (SSB/CW/Digimode) in Activator Activity, same filter-chip pattern as the existing network/band/entity filters. POTA/SOTA's free-text mode field is bucketed client-side (FT8/FT4/RTTY/etc. all fall into Digimode); FM/AM and blank modes match none of the three buckets, so they only disappear once a mode filter is actually active, same as any other unmatched value.
 
 ## [1.2.1] - 2026-07-29
 ### Fixed

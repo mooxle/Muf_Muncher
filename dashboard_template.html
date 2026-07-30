@@ -879,9 +879,24 @@ const POTA_CAP = 7;
 // set narrows the list to only the selected values (OR within a group, AND
 // across groups).
 const potaSelectedNetworks = new Set();
+const potaSelectedModes = new Set();
 const potaSelectedBands = new Set();
 const potaSelectedEntities = new Set();
 let potaExpanded = false;
+
+// POTA/SOTA both report a free-text mode string (observed: SSB, CW, FM, FT8,
+// FT4, DATA, and blank/unknown) - bucketed down to the three groups hunters
+// actually filter by. FM/AM and blank aren't phone-SSB, CW, or digital, so
+// they fall into no bucket (excluded once any mode filter is active, same as
+// the empty-set-means-no-filter behavior for the other groups otherwise).
+const MODE_ORDER = ['SSB', 'CW', 'Digimode'];
+function spotModeBucket(spot) {
+  const m = (spot.mode || '').toUpperCase();
+  if (!m || m === 'FM' || m === 'AM') return null;
+  if (m === 'CW') return 'CW';
+  if (m === 'SSB' || m === 'USB' || m === 'LSB') return 'SSB';
+  return 'Digimode'; // FT8/FT4/RTTY/PSK/JS8/DATA/etc.
+}
 
 // POTA references look like "DE-0601" (entity before the dash); SOTA spots
 // already carry associationCode separately (references look like
@@ -943,10 +958,12 @@ function buildPotaRow(spot) {
 
 function renderPotaFilters() {
   const networksPresent = ['POTA', 'SOTA'].filter(n => activatorSpots.some(s => s.network === n));
+  const modesPresent = MODE_ORDER.filter(name => activatorSpots.some(s => spotModeBucket(s) === name));
   const bandsPresent = POTA_BAND_ORDER.filter(name => activatorSpots.some(s => s.band === name));
   const entitiesPresent = [...new Set(activatorSpots.map(potaEntity))].sort();
   const groups = [
     [networksPresent, potaSelectedNetworks, s => s],
+    [modesPresent, potaSelectedModes, s => s],
     [bandsPresent, potaSelectedBands, s => s],
     [entitiesPresent, potaSelectedEntities, s => s],
   ];
@@ -978,6 +995,7 @@ function renderPotaFilters() {
 function renderPotaList() {
   const filtered = activatorSpots.filter(s =>
     (potaSelectedNetworks.size === 0 || potaSelectedNetworks.has(s.network)) &&
+    (potaSelectedModes.size === 0 || potaSelectedModes.has(spotModeBucket(s))) &&
     (potaSelectedBands.size === 0 || potaSelectedBands.has(s.band)) &&
     (potaSelectedEntities.size === 0 || potaSelectedEntities.has(potaEntity(s)))
   );
