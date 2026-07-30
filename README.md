@@ -78,9 +78,10 @@ The dashboard is a static snapshot regenerated on every run — schedule it with
 | **Hero row** | Current MUF(D) for each station + a green/yellow/gray chip per amateur band (20m–10m) estimating whether it's open right now, plus a square Space Weather glance tile (SFI/Kp/X-ray/wind, color-rated). All three tiles link down to their detail sections |
 | **European Ticker** | Current MUF(D) for 8 more GIRO ionosonde stations across Europe (Spain, UK, Italy ×2, Greece, Czechia, Hungary, Norway) as compact pill chips — coverage without the chart overhead |
 | **Global MUF Map** | One-click link out to [prop.kc2g.com](https://prop.kc2g.com)'s live, globally-interpolated MUF map |
-| **Activator Activity** | Live POTA *and* SOTA activator spots across Europe on HF bands, merged into one time-sorted list and band-colored using the *same* MUF-derived open/marginal/closed logic as the hero row. Click a network, band, or country chip to filter (multi-select), list caps at 7 rows with a "Show all" expander |
+| **Activator Activity** | Live POTA *and* SOTA activator spots across Europe on HF bands, merged into one time-sorted list and band-colored using the *same* MUF-derived open/marginal/closed logic as the hero row. Click a network, mode (SSB/CW/Digimode), band, or country chip to filter (multi-select), list caps at 7 rows with a "Show all" expander |
 | **Ionosonde detail** | foF2, MUF(D) and foEs charts for both hero stations, last 24h, with hover tooltips and a per-station legend toggle |
 | **Space Weather** | SFI, Kp (+ G-scale), GOES X-ray flux (+ flare class and R-scale), ACE solar wind speed, and daily sunspot number (SSN) — each with its own tile, sparkline, and a color rating (good/marginal/critical) for HF conditions |
+| **Header** | Live UTC + local clock, a manual dark/light toggle (persisted across reloads), and the running version linked to source — which lights up with an "update available" badge when `muf.py` finds a newer GitHub release during its cron run |
 | **Home screen ready** | A reload button and a manual pull-to-refresh gesture, since iOS strips native pull-to-refresh once the page is added to the home screen as a standalone web app |
 
 ![MUF Muncher — MUF(D), foF2 and foEs charts with hover crosshair and legend toggle](MUF_Screener2.png)
@@ -108,7 +109,7 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "MufMuncher/1.2.1 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/1.3.0 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \
