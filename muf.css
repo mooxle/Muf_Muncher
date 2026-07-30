@@ -87,7 +87,7 @@
   .hdr .logo { border-radius: 13px; flex: none; }
   .hdr h1 { font-family: var(--font-sans); font-size: 26px; font-weight: 200; margin: 0; letter-spacing: .18em; text-transform: uppercase; color: var(--brand-orange); }
   .hdr .tagline { font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; }
-  .hdr-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .hdr-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; margin-left: auto; }
 
   /* Line-art assets are pure dark strokes on transparent - flipping to
      white via filter:invert in dark mode is enough to keep them legible
