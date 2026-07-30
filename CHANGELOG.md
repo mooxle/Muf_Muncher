@@ -2,6 +2,10 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.3.1] - 2026-07-30
+### Fixed
+- Header clock/version block could stay left-aligned instead of right-aligned on narrow screens, reported specifically on iOS when the dashboard is added to the home screen as a standalone web app - the previous fix relied on `.hdr`'s `flex-wrap` organically breaking `.hdr-right` onto its own line before `margin-left:auto` could right-align it, which depends on exact available width and can apparently compute a few px differently in standalone mode than regular Safari. Replaced with an explicit `flex-direction: column` + `align-self: flex-end` at the existing sub-480px breakpoint (every real phone falls under it) instead of relying on the wrap timing at all.
+
 ## [1.3.0] - 2026-07-30
 ### Added
 - "Update available" indicator: `muf.py` checks GitHub's latest release tag during the cron fetch/render cycle and bakes a `latestVersion` field into `summary.json` and the HTML payload (falls back to the last known value in the store if the GitHub check fails, same pattern as the other external fetches). The dashboard header shows a small badge next to the current version number when `latestVersion` is newer — a plain client-side string compare, no runtime network call to GitHub.

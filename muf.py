@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 import plotext as plt
 
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
