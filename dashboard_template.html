@@ -37,6 +37,7 @@
       <a class="version-link" href="https://github.com/mooxle/Muf_Muncher" target="_blank" rel="noopener" title="Source on GitHub">
         <img src="https://github.com/favicon.ico" width="12" height="12" alt="" aria-hidden="true">
         <span id="versionHeader"></span>
+        <span id="updateBadge" class="update-badge" hidden></span>
       </a>
     </div>
   </div>
@@ -247,6 +248,26 @@ document.getElementById('hdrSub').textContent =
 document.getElementById('updatedFoot').textContent = 'Generated ' + DATA.generatedAt;
 document.getElementById('versionFoot').textContent = 'MUF Muncher v' + (DATA.version || '?');
 document.getElementById('versionHeader').textContent = 'v' + (DATA.version || '?');
+
+// "Update available" indicator - latestVersion is baked in server-side (muf.py
+// checks GitHub's releases API during the cron run), so this is just a string
+// compare, no client-side network call.
+function isNewerVersion(latest, current) {
+  if (!latest || !current) return false;
+  const a = latest.split('.').map(Number);
+  const b = current.split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] || 0, y = b[i] || 0;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
+if (isNewerVersion(DATA.latestVersion, DATA.version)) {
+  const updateBadgeEl = document.getElementById('updateBadge');
+  updateBadgeEl.textContent = 'v' + DATA.latestVersion + ' available';
+  updateBadgeEl.title = 'MUF Muncher v' + DATA.latestVersion + ' is available on GitHub (currently running v' + DATA.version + ')';
+  updateBadgeEl.hidden = false;
+}
 
 // Ticker: more European MUF(D) readings, current value only - names/codes are
 // our own static config (not external/untrusted input), so building this via

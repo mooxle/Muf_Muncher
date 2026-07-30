@@ -351,6 +351,23 @@ def fetch_pota_spots():
     return spots
 
 
+GITHUB_LATEST_RELEASE_URL = "https://api.github.com/repos/mooxle/Muf_Muncher/releases/latest"
+
+
+def fetch_latest_release_version():
+    """Latest published GitHub release tag, server-side so the dashboard can
+    flag an available update without any client-side call to GitHub (keeps
+    the "no external JS at runtime" property intact)."""
+    req = urllib.request.Request(
+        GITHUB_LATEST_RELEASE_URL,
+        headers={"User-Agent": USER_AGENT, "Accept": "application/vnd.github+json"},
+    )
+    with urllib.request.urlopen(req) as response:
+        raw = json.loads(response.read().decode("utf-8"))
+    tag = raw.get("tag_name") or ""
+    return tag.lstrip("vV") or None
+
+
 def fetch_sota_spots():
     url = "https://api-db2.sota.org.uk/api/spots/-1/all"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
@@ -432,11 +449,11 @@ SUMMARY_PATH = os.path.join(OUTPUT_DIR, "summary.json")
 EXTRA_SUMMARY_PATHS = [os.path.join(OUTPUT_DIR, "muf", "summary.json")]
 
 
-def render_summary(store, stations, generated_at):
+def render_summary(store, stations, generated_at, latest_version=None):
     """A small flat JSON, separate from muf_data.json's full 24h history, meant
     for dashboards like gethomepage/homepage whose custom-API widget maps fixed
     top-level fields - it can't index "the last item" of a variable-length array."""
-    summary = {"generatedAt": generated_at.strftime(ISO_FORM), "version": VERSION}
+    summary = {"generatedAt": generated_at.strftime(ISO_FORM), "version": VERSION, "latestVersion": latest_version}
     for code, name in stations.items():
         records = store.get(code, {}).get("records", [])
         summary[name.lower()] = {
@@ -480,10 +497,11 @@ EXTRA_OUTPUT_PATHS = [
 OUTPUT_DIRS = sorted({OUTPUT_DIR, *(os.path.dirname(p) for p in EXTRA_OUTPUT_PATHS)})
 
 
-def render_html(store, stations, generated_at, activator_spots, ticker_stations):
+def render_html(store, stations, generated_at, activator_spots, ticker_stations, latest_version=None):
     payload = {
         "generatedAt": generated_at.strftime(ISO_FORM),
         "version": VERSION,
+        "latestVersion": latest_version,
         "stations": [
             {"code": code, "name": store[code]["name"], "records": store[code]["records"]}
             for code in stations
@@ -610,9 +628,21 @@ for code, name in TICKER_STATIONS.items():
     _time.sleep(0.75)  # spread out GIRO/lgdc.uml.edu requests, avoid tripping its rate limiter
 store["_ticker"] = ticker
 
+print("Checking latest GitHub release...")
+try:
+    latest_version = fetch_latest_release_version()
+except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as e:
+    print(f"Failed to fetch latest release version: {e}")
+    latest_version = None
+if latest_version is not None:
+    store["_latestVersion"] = latest_version
+# else: keep whatever value (if any) is already in the store, so a transient
+# GitHub API failure doesn't hide a real update notice that was already shown.
+latest_version = store.get("_latestVersion")
+
 save_store(store)
-html_path = render_html(store, stations, now, activator_spots, TICKER_STATIONS)
-summary_path = render_summary(store, stations, now)
+html_path = render_html(store, stations, now, activator_spots, TICKER_STATIONS, latest_version)
+summary_path = render_summary(store, stations, now, latest_version)
 print(f"Dashboard written to {html_path}")
 print(f"Summary written to {summary_path}")
 
