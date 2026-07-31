@@ -114,6 +114,16 @@
     .hdr-wave { width: 140px; }
     .hdr h1 { font-size: 19px; }
     .hdr-halo { width: 240px; height: 150px; left: -20px; }
+    /* Every real phone falls under this breakpoint, so force the stacked
+       layout explicitly here instead of relying on .hdr's flex-wrap to
+       break the line organically - that depends on exact available width,
+       which iOS's standalone home-screen web app mode (no browser chrome,
+       different safe-area handling) can compute a few px differently than
+       regular Safari, occasionally keeping .hdr-right on the title's row
+       and defeating its margin-left:auto right-alignment. A fixed
+       flex-direction:column here is immune to that, on any width class. */
+    .hdr { flex-wrap: nowrap; flex-direction: column; align-items: stretch; }
+    .hdr-right { align-self: flex-end; margin-left: 0; }
   }
 
   /* Stat strip: the "is this thing alive, and covering what" facts, spread
@@ -125,8 +135,22 @@
   }
   .stat-strip .stat-item { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
   .stat-strip .stat-sep { width: 1px; height: 13px; background: var(--border); flex: none; }
-  .version-link { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
+  .hdr-utility-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .version-link { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
   .version-link:hover { color: var(--text-primary); }
+  .update-badge {
+    padding: 1px 6px; border-radius: 999px; font-size: 10.5px; font-weight: 600;
+    color: #7a5200; background: var(--warning); letter-spacing: .01em;
+  }
+  .theme-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; padding: 0;
+    border: none; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer;
+  }
+  .theme-toggle:hover { color: var(--text-primary); background: var(--surface-2); }
+  .theme-toggle .theme-icon-moon { display: none; }
+  .theme-toggle.is-dark .theme-icon-sun { display: none; }
+  .theme-toggle.is-dark .theme-icon-moon { display: block; }
   .coverage-note { font-size: 11px; color: var(--text-muted); margin: -6px 0 14px 2px; }
   .live-clock { text-align: right; font-family: var(--font-mono); }
   .clock-utc { font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text-secondary); letter-spacing: .01em; }

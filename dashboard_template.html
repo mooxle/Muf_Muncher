@@ -2,6 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+// Applied before the stylesheet paints anything, so a returning visitor's
+// explicit light/dark choice never flashes the system-default theme first.
+(function() {
+  try {
+    var stored = localStorage.getItem('muf-theme');
+    if (stored === 'light' || stored === 'dark') document.documentElement.setAttribute('data-theme', stored);
+  } catch (e) {}
+})();
+</script>
 <title>MUF Muncher — HF Propagation Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" href="mufmuncher-icon.png">
@@ -34,10 +44,17 @@
         <div class="clock-date" id="clockDate">&nbsp;</div>
         <div class="clock-local"><span id="localClock">--:--:--</span> <span class="clock-tz" id="localTz">CET</span></div>
       </div>
-      <a class="version-link" href="https://github.com/mooxle/Muf_Muncher" target="_blank" rel="noopener" title="Source on GitHub">
-        <img src="https://github.com/favicon.ico" width="12" height="12" alt="" aria-hidden="true">
-        <span id="versionHeader"></span>
-      </a>
+      <div class="hdr-utility-row">
+        <button type="button" id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <svg class="theme-icon-sun" viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"><circle cx="10" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M10 2v2M10 16v2M18 10h-2M4 10H2M15.5 4.5l-1.4 1.4M5.9 14.1l-1.4 1.4M15.5 15.5l-1.4-1.4M5.9 5.9L4.5 4.5"/></g></svg>
+          <svg class="theme-icon-moon" viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"><path d="M15.5 12.3A6.5 6.5 0 1 1 7.7 4.5a5.2 5.2 0 0 0 7.8 7.8z" fill="currentColor"/></svg>
+        </button>
+        <a class="version-link" href="https://github.com/mooxle/Muf_Muncher" target="_blank" rel="noopener" title="Source on GitHub">
+          <img src="https://github.com/favicon.ico" width="12" height="12" alt="" aria-hidden="true">
+          <span id="versionHeader"></span>
+          <span id="updateBadge" class="update-badge" hidden></span>
+        </a>
+      </div>
     </div>
   </div>
   <div class="stat-strip">
@@ -247,6 +264,47 @@ document.getElementById('hdrSub').textContent =
 document.getElementById('updatedFoot').textContent = 'Generated ' + DATA.generatedAt;
 document.getElementById('versionFoot').textContent = 'MUF Muncher v' + (DATA.version || '?');
 document.getElementById('versionHeader').textContent = 'v' + (DATA.version || '?');
+
+// "Update available" indicator - latestVersion is baked in server-side (muf.py
+// checks GitHub's releases API during the cron run), so this is just a string
+// compare, no client-side network call.
+function isNewerVersion(latest, current) {
+  if (!latest || !current) return false;
+  const a = latest.split('.').map(Number);
+  const b = current.split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] || 0, y = b[i] || 0;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
+if (isNewerVersion(DATA.latestVersion, DATA.version)) {
+  const updateBadgeEl = document.getElementById('updateBadge');
+  updateBadgeEl.textContent = 'v' + DATA.latestVersion + ' available';
+  updateBadgeEl.title = 'MUF Muncher v' + DATA.latestVersion + ' is available on GitHub (currently running v' + DATA.version + ')';
+  updateBadgeEl.hidden = false;
+}
+
+// Dark mode toggle - explicit choice persisted in localStorage and applied via
+// data-theme (set early in <head>, before first paint, to avoid a flash back
+// to the system default); until the user picks one, prefers-color-scheme rules.
+const themeToggleEl = document.getElementById('themeToggle');
+const prefersDarkMq = window.matchMedia('(prefers-color-scheme: dark)');
+
+function effectiveTheme() {
+  const explicit = document.documentElement.getAttribute('data-theme');
+  return explicit === 'light' || explicit === 'dark' ? explicit : (prefersDarkMq.matches ? 'dark' : 'light');
+}
+function syncThemeIcon() {
+  themeToggleEl.classList.toggle('is-dark', effectiveTheme() === 'dark');
+}
+themeToggleEl.addEventListener('click', () => {
+  const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('muf-theme', next); } catch (e) {}
+  syncThemeIcon();
+});
+syncThemeIcon();
 
 // Ticker: more European MUF(D) readings, current value only - names/codes are
 // our own static config (not external/untrusted input), so building this via
@@ -821,9 +879,24 @@ const POTA_CAP = 7;
 // set narrows the list to only the selected values (OR within a group, AND
 // across groups).
 const potaSelectedNetworks = new Set();
+const potaSelectedModes = new Set();
 const potaSelectedBands = new Set();
 const potaSelectedEntities = new Set();
 let potaExpanded = false;
+
+// POTA/SOTA both report a free-text mode string (observed: SSB, CW, FM, FT8,
+// FT4, DATA, and blank/unknown) - bucketed down to the three groups hunters
+// actually filter by. FM/AM and blank aren't phone-SSB, CW, or digital, so
+// they fall into no bucket (excluded once any mode filter is active, same as
+// the empty-set-means-no-filter behavior for the other groups otherwise).
+const MODE_ORDER = ['SSB', 'CW', 'Digimode'];
+function spotModeBucket(spot) {
+  const m = (spot.mode || '').toUpperCase();
+  if (!m || m === 'FM' || m === 'AM') return null;
+  if (m === 'CW') return 'CW';
+  if (m === 'SSB' || m === 'USB' || m === 'LSB') return 'SSB';
+  return 'Digimode'; // FT8/FT4/RTTY/PSK/JS8/DATA/etc.
+}
 
 // POTA references look like "DE-0601" (entity before the dash); SOTA spots
 // already carry associationCode separately (references look like
@@ -885,10 +958,12 @@ function buildPotaRow(spot) {
 
 function renderPotaFilters() {
   const networksPresent = ['POTA', 'SOTA'].filter(n => activatorSpots.some(s => s.network === n));
+  const modesPresent = MODE_ORDER.filter(name => activatorSpots.some(s => spotModeBucket(s) === name));
   const bandsPresent = POTA_BAND_ORDER.filter(name => activatorSpots.some(s => s.band === name));
   const entitiesPresent = [...new Set(activatorSpots.map(potaEntity))].sort();
   const groups = [
     [networksPresent, potaSelectedNetworks, s => s],
+    [modesPresent, potaSelectedModes, s => s],
     [bandsPresent, potaSelectedBands, s => s],
     [entitiesPresent, potaSelectedEntities, s => s],
   ];
@@ -920,6 +995,7 @@ function renderPotaFilters() {
 function renderPotaList() {
   const filtered = activatorSpots.filter(s =>
     (potaSelectedNetworks.size === 0 || potaSelectedNetworks.has(s.network)) &&
+    (potaSelectedModes.size === 0 || potaSelectedModes.has(spotModeBucket(s))) &&
     (potaSelectedBands.size === 0 || potaSelectedBands.has(s.band)) &&
     (potaSelectedEntities.size === 0 || potaSelectedEntities.has(potaEntity(s)))
   );
