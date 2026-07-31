@@ -301,6 +301,17 @@
   .pota-meta { flex: none; color: var(--text-muted); font-size: 11px; text-align: right; white-space: nowrap; }
   .pota-empty { color: var(--text-muted); font-size: 12.5px; padding: 8px 0; }
 
+  /* On narrow screens, band-chip + network-tag + call + meta alone (even
+     with .pota-park fully collapsed to 0) can be wider than the viewport,
+     since none of them shrink - the row would silently overflow past the
+     card edge with no way to scroll to it. Wrap the meta info onto its own
+     line instead of fighting for space on the main line. */
+  @media (max-width: 480px) {
+    .pota-row { flex-wrap: wrap; row-gap: 2px; }
+    .pota-park { flex-basis: 0; }
+    .pota-meta { flex: 1 1 100%; text-align: left; padding-left: 42px; }
+  }
+
   /* Filters: click a band/entity to narrow the list to just that selection
      (multiple selections within a group OR together); empty selection shows
      everything. Inclusion-style, unlike the exclusion-style chart legends
