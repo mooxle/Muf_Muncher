@@ -53,7 +53,7 @@ By default the hero stations are whichever two of the ten curated GIRO stations 
 MUF_HOME_LOCATOR=JO40jg python3 muf.py
 ```
 
-All ten curated stations are in Europe, so a locator more than ~1500km from the nearest one still works (it just picks the least-far two), but a console warning and a note in the dashboard footer flag that the hero readings won't be locally representative.
+All ten curated stations are in Europe, so a locator more than ~1500km from the nearest one still works (it just picks the least-far two), but a console warning plus a highlighted note in the dashboard's header and footer flag that the hero readings won't be locally representative.
 
 The page fetches its data payload at load time, so opening `dashboard.html` directly from disk (`file://`) won't work — `fetch()` is blocked cross-origin for local files in every major browser. Serve the directory instead:
 
@@ -83,13 +83,13 @@ The dashboard is a static snapshot regenerated on every run — schedule it with
 
 | Section | What it answers |
 |---|---|
-| **Hero row** | Current MUF(D) for each station + a green/yellow/gray chip per amateur band (20m–10m) estimating whether it's open right now, plus a square Space Weather glance tile (SFI/Kp/X-ray/wind, color-rated). All three tiles link down to their detail sections |
-| **European Ticker** | Current MUF(D) for 8 more GIRO ionosonde stations across Europe (Spain, UK, Italy ×2, Greece, Czechia, Hungary, Norway) as compact pill chips — coverage without the chart overhead |
+| **Hero row** | Current MUF(D) for each station + how far it is from your configured locator ("299km from you") + a green/yellow/gray chip per amateur band (20m–10m) estimating whether it's open right now, plus a square Space Weather glance tile (SFI/Kp/X-ray/wind, color-rated). All three tiles link down to their detail sections |
+| **European Ticker** | Current MUF(D) for 8 more GIRO ionosonde stations across Europe (Spain, UK, Italy ×2, Greece, Czechia, Hungary, Norway) as compact pill chips — coverage without the chart overhead; hover a chip for its distance from your locator |
 | **Global MUF Map** | One-click link out to [prop.kc2g.com](https://prop.kc2g.com)'s live, globally-interpolated MUF map |
 | **Activator Activity** | Live POTA *and* SOTA activator spots across Europe on HF bands, merged into one time-sorted list and band-colored using the *same* MUF-derived open/marginal/closed logic as the hero row. Click a network, mode (SSB/CW/Digimode), band, or country chip to filter (multi-select), list caps at 7 rows with a "Show all" expander |
 | **Ionosonde detail** | foF2, MUF(D) and foEs charts for both hero stations, last 24h, with hover tooltips and a per-station legend toggle |
 | **Space Weather** | SFI, Kp (+ G-scale), GOES X-ray flux (+ flare class and R-scale), ACE solar wind speed, and daily sunspot number (SSN) — each with its own tile, sparkline, and a color rating (good/marginal/critical) for HF conditions |
-| **Header** | Live UTC + local clock, a manual dark/light toggle (persisted across reloads), and the running version linked to source — which lights up with an "update available" badge when `muf.py` finds a newer GitHub release during its cron run |
+| **Header** | Live UTC + local clock, your active locator ("Your locator: JO40jg", or "Frankfurt am Main (JO40ic) · default" if unset — highlighted if it's outside the ten stations' coverage), a manual dark/light toggle (persisted across reloads), and the running version linked to source — which lights up with an "update available" badge when `muf.py` finds a newer GitHub release during its cron run |
 | **Home screen ready** | A reload button and a manual pull-to-refresh gesture, since iOS strips native pull-to-refresh once the page is added to the home screen as a standalone web app |
 
 ![MUF Muncher — MUF(D), foF2 and foEs charts with hover crosshair and legend toggle](MUF_Screener2.png)
