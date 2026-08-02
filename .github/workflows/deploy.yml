@@ -43,6 +43,11 @@ jobs:
       - name: Run muf.py
         env:
           MUF_OUTPUT_DIR: dist
+          # Not a secret (a grid square isn't sensitive) - this is Max's own
+          # locator, so muf.sammet.me (his personal production instance)
+          # shows hero stations picked for his actual location instead of
+          # silently relying on the Frankfurt default.
+          MUF_HOME_LOCATOR: JO40jg
         run: python3 muf.py
 
       - name: Deploy to Cloudflare Pages

@@ -2,6 +2,13 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.4.0] - 2026-08-02
+### Added
+- `MUF_HOME_LOCATOR` (Maidenhead grid square, 4 or 6 characters): hero stations are now the two nearest of ten curated European GIRO stations to this locator, by great-circle distance, instead of hardcoded Dourbes + Juliusruh. Defaults to Frankfurt am Main if unset, which resolves to Dourbes + Pruhonice — a real behavior change from the previous fixed default, since Pruhonice is genuinely the closer of the two. The other eight stations fall back to the ticker automatically. Falls back to the Frankfurt default (with a warning) on an unparseable locator instead of crashing. Docker: set via `docker-compose.yml`'s `environment:` — `entrypoint.sh` now regenerates `/etc/cron.d/muf-cron` with the runtime value baked in at container start, since cron doesn't inherit the container's environment and would otherwise only see it on the initial fetch.
+- Concept validated first with live PSKReporter data before building: real reception-report activity for a mid-Germany locator showed substantial activity on bands the MUF(D) heuristic calls "marginal"/"closed" (15m had more real reports than the "open" bands combined) — logged in `muf-muncher-notes/ROADMAP.md` as the next candidate feature, not built yet.
+- `MUF_HOME_LOCATOR` now warns instead of silently picking irrelevant hero stations when the configured locator is far outside the ten curated stations' European coverage (>1500km from the nearest one): logged to the console during the fetch/render cycle, and surfaced as a note in the dashboard's footer (`configured location is ~Xkm from the nearest covered station...`) so a self-hoster outside Europe sees it too, not just whoever reads the cron log.
+- `.github/workflows/deploy.yml` now sets `MUF_HOME_LOCATOR` explicitly (Max's own grid square) so muf.sammet.me's hero stations are determined by an intentional value instead of coincidentally matching the Frankfurt default.
+
 ## [1.3.1] - 2026-07-30
 ### Fixed
 - Header clock/version block could stay left-aligned instead of right-aligned on narrow screens, reported specifically on iOS when the dashboard is added to the home screen as a standalone web app - the previous fix relied on `.hdr`'s `flex-wrap` organically breaking `.hdr-right` onto its own line before `margin-left:auto` could right-align it, which depends on exact available width and can apparently compute a few px differently in standalone mode than regular Safari. Replaced with an explicit `flex-direction: column` + `align-self: flex-end` at the existing sub-480px breakpoint (every real phone falls under it) instead of relying on the wrap timing at all.

@@ -260,7 +260,10 @@ const SECONDARY_METRICS = METRICS.filter(m => m.key !== 'muf'); // muf lives in 
 
 document.getElementById('hdrSub').textContent =
   stations.map(s => `${s.name} (${s.code})`).join(' & ') +
-  ' full 24h history · no data older than 24h retained (sunspot number: 30 days)';
+  ' full 24h history · no data older than 24h retained (sunspot number: 30 days)' +
+  (DATA.farFromCoverage
+    ? ` · configured location is ~${DATA.homeDistanceKm} km from the nearest covered station — MUF Muncher only covers Europe today, these readings are not locally representative`
+    : '');
 document.getElementById('updatedFoot').textContent = 'Generated ' + DATA.generatedAt;
 document.getElementById('versionFoot').textContent = 'MUF Muncher v' + (DATA.version || '?');
 document.getElementById('versionHeader').textContent = 'v' + (DATA.version || '?');

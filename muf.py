@@ -15,13 +15,14 @@ os.environ["TZ"] = "UTC"
 if hasattr(_time, "tzset"):
     _time.tzset()
 
+import math
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import plotext as plt
 
-VERSION = "1.3.1"
+VERSION = "1.4.0"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
@@ -41,6 +42,12 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # caching benefit the external file gets served over a real server.
 INLINE_PAYLOAD = os.environ.get("MUF_INLINE_PAYLOAD", "").lower() in ("1", "true", "yes")
 
+# Home locator (Maidenhead, 4 or 6 chars) used to pick the two nearest GIRO
+# stations as hero tiles - see maidenhead_to_latlon()/STATION_INFO below.
+# Falls back to Frankfurt am Main if unset or unparseable, so a fresh
+# self-hosted instance still shows something sensible for mid-Europe.
+HOME_LOCATOR = os.environ.get("MUF_HOME_LOCATOR", "").strip()
+
 JSON_PATH = os.path.join(OUTPUT_DIR, "muf_data.json")
 ISO_FORM = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -52,43 +59,102 @@ to_time = now.strftime("%Y/%m/%d %H:%M:%S")
 
 # The old /common/DIDBGetValues servlet has been retired by the server (404).
 # It was replaced by /fastchar/getbest, discovered via the scaled.php search form on giro.uml.edu.
-stations = {
-    "DB049": "Dourbes",
-    "JR055": "Juliusruh",
+#
+# Every GIRO station this project has vetted as reliably online, with
+# (name, ISO 3166-1 alpha-2 country, lat, lon) - coordinates from GIRO's own
+# https://lgdc.uml.edu/ionoweb/locations, hardcoded since station locations
+# don't change. Picked from GIRO's full station list for European coverage,
+# then pruned to only the ones that actually return recent data - Chilton
+# (RL052), Warsaw (MZ152) and its Olsztyn alternate (OL246), Kiruna (KI167),
+# and Nicosia (NI135, last reading was 12 days old) are the only stations in
+# their countries but currently offline/stale, so those countries have no
+# entry here.
+STATION_INFO = {
+    "DB049": ("Dourbes", "BE", 50.1, 4.6),
+    "JR055": ("Juliusruh", "DE", 54.6, 13.4),
+    "EB040": ("Roquetes", "ES", 40.8, 0.5),
+    "FF051": ("Fairford", "GB", 51.7, -1.5),
+    "VT139": ("San Vito", "IT", 40.6, 17.8),
+    "GM037": ("Gibilmanna", "IT", 37.9, 14.0),
+    "AT138": ("Athens", "GR", 38.0, 23.5),
+    "PQ052": ("Pruhonice", "CZ", 50.0, 14.6),
+    "SO148": ("Sopron", "HU", 47.63, 16.72),
+    "TR169": ("Tromso", "NO", 69.6, 19.2),
 }
+
+
+def maidenhead_to_latlon(locator):
+    """4- or 6-character Maidenhead grid square -> (lat, lon) of its center."""
+    loc = locator.strip()
+    lon = -180.0 + (ord(loc[0].upper()) - ord("A")) * 20 + int(loc[2]) * 2
+    lat = -90.0 + (ord(loc[1].upper()) - ord("A")) * 10 + int(loc[3])
+    if len(loc) >= 6:
+        lon += (ord(loc[4].lower()) - ord("a")) * (2 / 24) + (1 / 24)
+        lat += (ord(loc[5].lower()) - ord("a")) * (1 / 24) + (0.5 / 24)
+    else:
+        lon += 1
+        lat += 0.5
+    return lat, lon
+
+
+def haversine_km(a, b):
+    lat1, lon1 = a
+    lat2, lon2 = b
+    r = 6371
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    h = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlambda / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(h))
+
+
+_FRANKFURT_LATLON = (50.1109, 8.6821)
+try:
+    HOME_LATLON = maidenhead_to_latlon(HOME_LOCATOR) if HOME_LOCATOR else _FRANKFURT_LATLON
+except (IndexError, ValueError):
+    print(f"MUF_HOME_LOCATOR={HOME_LOCATOR!r} doesn't look like a Maidenhead locator, falling back to Frankfurt am Main")
+    HOME_LATLON = _FRANKFURT_LATLON
+
+_stations_by_distance = sorted(
+    STATION_INFO.items(),
+    key=lambda item: haversine_km(HOME_LATLON, (item[1][2], item[1][3])),
+)
+_hero_codes = [code for code, _ in _stations_by_distance[:2]]
+_ticker_codes = [code for code, _ in _stations_by_distance[2:]]
+
+# All ten curated stations sit in Europe (see STATION_INFO comment above), so
+# a locator this far from the nearest one means the hero readings are no
+# longer locally representative - flagged here rather than silently shown as
+# if they were. 1500km is comfortably past the farthest realistic in-Europe
+# nearest-station gap (Tromso/Iceland-ish edges), so it only fires for
+# locators genuinely outside current coverage.
+FAR_FROM_COVERAGE_KM = 1500
+_nearest_name, _, _nearest_lat, _nearest_lon = _stations_by_distance[0][1]
+HOME_DISTANCE_KM = round(haversine_km(HOME_LATLON, (_nearest_lat, _nearest_lon)))
+FAR_FROM_COVERAGE = HOME_DISTANCE_KM > FAR_FROM_COVERAGE_KM
+if FAR_FROM_COVERAGE:
+    print(
+        f"MUF_HOME_LOCATOR is {HOME_DISTANCE_KM} km from the nearest covered station "
+        f"({_nearest_name}) - MUF Muncher only covers Europe today, hero station "
+        f"readings will not be locally representative."
+    )
+
+# The two nearest stations to HOME_LATLON become the hero tiles (full 24h
+# history/charts); everything else falls back to the ticker (latest MUF(D)
+# only). Nearest two to the Frankfurt am Main fallback are Dourbes and
+# Pruhonice (not Juliusruh, despite that being the previous hardcoded
+# default) - Pruhonice is genuinely ~170km closer to Frankfurt.
+stations = {code: STATION_INFO[code][0] for code in _hero_codes}
 # foEs included alongside foF2/MUF(D): during strong Sporadic-E the F2 trace can
 # be unscoreable ("---" in the raw feed), so foEs is often the only usable value.
 chars = "foF2,MUF(D),foEs"
 
 # Ticker: more European stations, current MUF(D) only (no 24h history/chart -
-# that's what keeps these cheap to add). Picked from GIRO's full station list
-# (https://lgdc.uml.edu/ionoweb/locations) for European coverage, then pruned
-# to only the ones that actually return recent data - Chilton (RL052), Warsaw
-# (MZ152) and its Olsztyn alternate (OL246), Kiruna (KI167), and Nicosia
-# (NI135, last reading was 12 days old) are the only stations in their
-# countries but currently offline/stale, so those countries have no entry.
-TICKER_STATIONS = {
-    "EB040": "Roquetes",
-    "FF051": "Fairford",
-    "VT139": "San Vito",
-    "GM037": "Gibilmanna",
-    "AT138": "Athens",
-    "PQ052": "Pruhonice",
-    "SO148": "Sopron",
-    "TR169": "Tromso",
-}
+# that's what keeps these cheap to add).
+TICKER_STATIONS = {code: STATION_INFO[code][0] for code in _ticker_codes}
 # ISO 3166-1 alpha-2, shown as a small badge next to each ticker station since
 # not every reader knows which country a given ionosonde sits in.
-TICKER_COUNTRY = {
-    "EB040": "ES",
-    "FF051": "GB",
-    "VT139": "IT",
-    "GM037": "IT",
-    "AT138": "GR",
-    "PQ052": "CZ",
-    "SO148": "HU",
-    "TR169": "NO",
-}
+TICKER_COUNTRY = {code: STATION_INFO[code][1] for code in _ticker_codes}
 TICKER_LOOKBACK = timedelta(hours=6)
 
 DATE_FORM = "d/m/Y H:M:S"
@@ -502,6 +568,8 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
         "generatedAt": generated_at.strftime(ISO_FORM),
         "version": VERSION,
         "latestVersion": latest_version,
+        "homeDistanceKm": HOME_DISTANCE_KM,
+        "farFromCoverage": FAR_FROM_COVERAGE,
         "stations": [
             {"code": code, "name": store[code]["name"], "records": store[code]["records"]}
             for code in stations
