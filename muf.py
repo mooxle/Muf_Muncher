@@ -109,6 +109,11 @@ def haversine_km(a, b):
 
 
 _FRANKFURT_LATLON = (50.1109, 8.6821)
+# Frankfurt am Main's own 6-char grid square, hardcoded (its lat/lon never
+# changes) purely for display - so the dashboard can show a locator next to
+# the city name on the default fallback too, consistent with how a custom
+# MUF_HOME_LOCATOR is shown.
+FRANKFURT_LOCATOR = "JO40ic"
 HOME_LOCATOR_IS_DEFAULT = not HOME_LOCATOR
 try:
     HOME_LATLON = maidenhead_to_latlon(HOME_LOCATOR) if HOME_LOCATOR else _FRANKFURT_LATLON
@@ -576,7 +581,7 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
         "generatedAt": generated_at.strftime(ISO_FORM),
         "version": VERSION,
         "latestVersion": latest_version,
-        "homeLocator": HOME_LOCATOR,
+        "homeLocator": HOME_LOCATOR if not HOME_LOCATOR_IS_DEFAULT else FRANKFURT_LOCATOR,
         "homeLocatorIsDefault": HOME_LOCATOR_IS_DEFAULT,
         "homeDistanceKm": HOME_DISTANCE_KM,
         "farFromCoverage": FAR_FROM_COVERAGE,
@@ -593,7 +598,13 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
         "indices": store.get("_indices", {"kindex": [], "sfi": []}),
         "activatorSpots": activator_spots,
         "tickerStations": [
-            {"code": code, "name": name, "country": TICKER_COUNTRY.get(code), **store["_ticker"][code]}
+            {
+                "code": code,
+                "name": name,
+                "country": TICKER_COUNTRY.get(code),
+                "distanceKm": DISTANCE_BY_CODE.get(code),
+                **store["_ticker"][code],
+            }
             for code, name in ticker_stations.items()
             if code in store.get("_ticker", {})
         ],

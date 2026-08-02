@@ -271,12 +271,12 @@ document.getElementById('versionHeader').textContent = 'v' + (DATA.version || '?
 
 const hdrLocatorEl = document.getElementById('hdrLocator');
 if (DATA.homeLocatorIsDefault) {
-  hdrLocatorEl.textContent = 'Location: Frankfurt am Main (default)';
+  hdrLocatorEl.textContent = `Your locator: Frankfurt am Main (${DATA.homeLocator}) · default`;
 } else if (DATA.farFromCoverage) {
-  hdrLocatorEl.textContent = `Location: ${DATA.homeLocator} (⚠ ${DATA.homeDistanceKm}km from coverage)`;
+  hdrLocatorEl.textContent = `Your locator: ${DATA.homeLocator} (⚠ ${DATA.homeDistanceKm}km from coverage)`;
   hdrLocatorEl.classList.add('is-far');
 } else {
-  hdrLocatorEl.textContent = `Location: ${DATA.homeLocator}`;
+  hdrLocatorEl.textContent = `Your locator: ${DATA.homeLocator}`;
 }
 
 // "Update available" indicator - latestVersion is baked in server-side (muf.py
@@ -328,7 +328,8 @@ const tickerRowEl = document.getElementById('tickerRow');
 if (tickerStations.length) {
   const chips = tickerStations.map(s => {
     const val = s.muf != null ? `${s.muf.toFixed(2)} MHz` : '—';
-    return `<span class="ticker-chip"><span class="ticker-name">${s.name}</span><span class="ticker-country">${s.country || ''}</span><span class="ticker-value">${val}</span></span>`;
+    const title = s.distanceKm != null ? ` title="${s.distanceKm}km from you"` : '';
+    return `<span class="ticker-chip"${title}><span class="ticker-name">${s.name}</span><span class="ticker-country">${s.country || ''}</span><span class="ticker-value">${val}</span></span>`;
   });
   tickerRowEl.innerHTML = '<span class="ticker-label">More Europe</span>' + chips.join('');
 } else {
@@ -724,12 +725,12 @@ for (const s of stations) {
   card.dataset.station = s.code;
   card.style.setProperty('--hero-color', s.color);
   card.innerHTML = `
-    <div class="hero-name">${s.name}</div>
+    <div class="hero-name">${s.name}${s.distanceKm != null ? `<span class="hero-distance">${s.distanceKm}km from you</span>` : ''}</div>
     <div class="hero-value-row">
       <div><span class="hero-value">${muf != null ? muf.toFixed(2) : '–'}</span><span class="hero-unit">MHz</span></div>
       ${deltaHtml}
     </div>
-    <div class="hero-sub">MUF(D) &middot; 3000km${s.distanceKm != null ? ` &middot; ${s.distanceKm}km from you` : ''}</div>
+    <div class="hero-sub">MUF(D) &middot; 3000km</div>
     <svg class="hero-spark" viewBox="0 0 200 26" preserveAspectRatio="none">
       <path d="${sparkPath(s.records, 'muf', 200, 24)}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,1)"/>
     </svg>
