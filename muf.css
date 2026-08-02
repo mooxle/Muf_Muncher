@@ -157,6 +157,8 @@
   .clock-date { font-size: 11px; font-weight: 500; color: var(--text-muted); letter-spacing: .03em; margin-top: 1px; font-family: var(--font-sans); }
   .clock-local { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-muted); margin-top: 3px; }
   .clock-tz { font-size: 0.68em; font-weight: 500; color: var(--text-muted); font-family: var(--font-sans); }
+  .hdr-locator { font-size: 11px; color: var(--text-muted); margin-top: 3px; text-align: right; }
+  .hdr-locator.is-far { color: var(--warning); font-weight: 600; }
   .clock-colon { animation: clock-blink 1s step-start infinite; }
   @keyframes clock-blink { 50% { opacity: .3; } }
   .data-updated { display: flex; align-items: center; gap: 5px; font-weight: 600; color: var(--text-secondary); font-variant-numeric: tabular-nums; }

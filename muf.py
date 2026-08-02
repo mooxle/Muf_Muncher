@@ -109,11 +109,13 @@ def haversine_km(a, b):
 
 
 _FRANKFURT_LATLON = (50.1109, 8.6821)
+HOME_LOCATOR_IS_DEFAULT = not HOME_LOCATOR
 try:
     HOME_LATLON = maidenhead_to_latlon(HOME_LOCATOR) if HOME_LOCATOR else _FRANKFURT_LATLON
 except (IndexError, ValueError):
     print(f"MUF_HOME_LOCATOR={HOME_LOCATOR!r} doesn't look like a Maidenhead locator, falling back to Frankfurt am Main")
     HOME_LATLON = _FRANKFURT_LATLON
+    HOME_LOCATOR_IS_DEFAULT = True
 
 _stations_by_distance = sorted(
     STATION_INFO.items(),
@@ -121,6 +123,12 @@ _stations_by_distance = sorted(
 )
 _hero_codes = [code for code, _ in _stations_by_distance[:2]]
 _ticker_codes = [code for code, _ in _stations_by_distance[2:]]
+# Per-station distance from HOME_LATLON, shown in the dashboard's hero tiles
+# ("Xkm from you") so a reader can judge at a glance how locally
+# representative a given reading actually is.
+DISTANCE_BY_CODE = {
+    code: round(haversine_km(HOME_LATLON, (lat, lon))) for code, (_, _, lat, lon) in STATION_INFO.items()
+}
 
 # All ten curated stations sit in Europe (see STATION_INFO comment above), so
 # a locator this far from the nearest one means the hero readings are no
@@ -129,14 +137,14 @@ _ticker_codes = [code for code, _ in _stations_by_distance[2:]]
 # nearest-station gap (Tromso/Iceland-ish edges), so it only fires for
 # locators genuinely outside current coverage.
 FAR_FROM_COVERAGE_KM = 1500
-_nearest_name, _, _nearest_lat, _nearest_lon = _stations_by_distance[0][1]
-HOME_DISTANCE_KM = round(haversine_km(HOME_LATLON, (_nearest_lat, _nearest_lon)))
+_nearest_code = _stations_by_distance[0][0]
+HOME_DISTANCE_KM = DISTANCE_BY_CODE[_nearest_code]
 FAR_FROM_COVERAGE = HOME_DISTANCE_KM > FAR_FROM_COVERAGE_KM
 if FAR_FROM_COVERAGE:
     print(
         f"MUF_HOME_LOCATOR is {HOME_DISTANCE_KM} km from the nearest covered station "
-        f"({_nearest_name}) - MUF Muncher only covers Europe today, hero station "
-        f"readings will not be locally representative."
+        f"({STATION_INFO[_nearest_code][0]}) - MUF Muncher only covers Europe today, hero "
+        f"station readings will not be locally representative."
     )
 
 # The two nearest stations to HOME_LATLON become the hero tiles (full 24h
@@ -568,10 +576,17 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
         "generatedAt": generated_at.strftime(ISO_FORM),
         "version": VERSION,
         "latestVersion": latest_version,
+        "homeLocator": HOME_LOCATOR,
+        "homeLocatorIsDefault": HOME_LOCATOR_IS_DEFAULT,
         "homeDistanceKm": HOME_DISTANCE_KM,
         "farFromCoverage": FAR_FROM_COVERAGE,
         "stations": [
-            {"code": code, "name": store[code]["name"], "records": store[code]["records"]}
+            {
+                "code": code,
+                "name": store[code]["name"],
+                "records": store[code]["records"],
+                "distanceKm": DISTANCE_BY_CODE.get(code),
+            }
             for code in stations
             if code in store
         ],
