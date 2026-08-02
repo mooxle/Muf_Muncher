@@ -2,6 +2,10 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.4.1] - 2026-08-02
+### Fixed
+- `muf.css`, `mufmuncher-icon.png`, `mufmuncher-llama.png` and `mufmuncher-wave.png` are served with a 4h `Cache-Control` on Cloudflare Pages (they're normally static across runs) but were referenced by plain filename, with nothing to bust that cache on the rare run where one of them *does* change — discovered live on muf.sammet.me right after v1.4.0 shipped: the new `.hero-distance`/`.hdr-locator` CSS rules hadn't reached an already-visited browser, which rendered those elements unstyled (oversized default browser font) while the fresh HTML/payload underneath looked completely normal, since those aren't cached the same way. `render_html()` now appends `?v=<VERSION>` to all four references, so a version bump forces a fresh fetch instead of waiting out the cache window.
+
 ## [1.4.0] - 2026-08-02
 ### Added
 - `MUF_HOME_LOCATOR` (Maidenhead grid square, 4 or 6 characters): hero stations are now the two nearest of ten curated European GIRO stations to this locator, by great-circle distance, instead of hardcoded Dourbes + Juliusruh. Defaults to Frankfurt am Main if unset, which resolves to Dourbes + Pruhonice — a real behavior change from the previous fixed default, since Pruhonice is genuinely the closer of the two. The other eight stations fall back to the ticker automatically. Falls back to the Frankfurt default (with a warning) on an unparseable locator instead of crashing. Docker: set via `docker-compose.yml`'s `environment:` — `entrypoint.sh` now regenerates `/etc/cron.d/muf-cron` with the runtime value baked in at container start, since cron doesn't inherit the container's environment and would otherwise only see it on the initial fetch.

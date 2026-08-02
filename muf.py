@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 
 import plotext as plt
 
-VERSION = "1.4.0"
+VERSION = "1.4.1"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
@@ -616,6 +616,13 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
     inline_json = json.dumps(payload).replace("</", "<\\/") if INLINE_PAYLOAD else ""
     inline_tag = f"<script>window.__MUF_PAYLOAD__ = {inline_json};</script>" if INLINE_PAYLOAD else ""
     html = html.replace("<!-- __MUF_INLINE_PAYLOAD__ -->", inline_tag)
+    # These are served with a long Cache-Control (4h on Cloudflare Pages) since
+    # they're normally static across runs - bust that cache on every version
+    # bump specifically, so a CSS/asset change (e.g. this one, discovered live
+    # on muf.sammet.me) reaches already-visited browsers immediately instead
+    # of up to 4h later, without giving up the caching benefit in between.
+    for asset in ("muf.css", "mufmuncher-icon.png", "mufmuncher-llama.png", "mufmuncher-wave.png"):
+        html = html.replace(f'"{asset}"', f'"{asset}?v={VERSION}"')
     with open(HTML_OUTPUT_PATH, "w") as f:
         f.write(html)
     for path in EXTRA_OUTPUT_PATHS:
