@@ -123,7 +123,11 @@
        and defeating its margin-left:auto right-alignment. A fixed
        flex-direction:column here is immune to that, on any width class. */
     .hdr { flex-wrap: nowrap; flex-direction: column; align-items: stretch; }
-    .hdr-right { align-self: flex-end; margin-left: 0; }
+    /* max-width caps this shrink-to-fit box at the header's own width - without
+       it, a long unbroken line (e.g. the "Your locator: ..." note) sets the
+       box's preferred width past the viewport instead of wrapping inside it. */
+    .hdr-right { align-self: flex-end; margin-left: 0; max-width: 100%; }
+    .hdr-locator { max-width: 100%; }
   }
 
   /* Stat strip: the "is this thing alive, and covering what" facts, spread
