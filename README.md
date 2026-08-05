@@ -117,7 +117,7 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "MufMuncher/1.4.1 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/1.4.2 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \
@@ -375,6 +375,8 @@ Every notable change is logged in [CHANGELOG.md](CHANGELOG.md).
 Ullrich "Uz" von Bassewitz, [DF5WC](https://www.qrz.com/db/DF5WC), pointed out the shebang line and suggested splitting the static assets from the data payload for proper browser caching (see [How It Works](#how-it-works)) — both are in here because of that.
 
 Ivar Nygård, [LB8VA](https://www.qrz.com/db/LB8VA), reported that `muf.py` crashed immediately on Windows (`time.tzset()` isn't available there) — fixed in v1.2.1.
+
+Andreas, [DN9GU](https://www.qrz.com/db/DN9GU), reported that the ionosonde detail charts' x-axis could show a misleading hour at the right edge — fixed in v1.4.2.
 
 ---
 

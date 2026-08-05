@@ -555,12 +555,28 @@ function buildChart(metric) {
     t.textContent = v.toFixed(1);
     gGrid.appendChild(t);
   }
-  for (let h = 0; h <= 24; h += 4) {
-    const tt = t0 + (h / 24) * (t1 - t0);
+  // Real, calendar-aligned UTC hour ticks (every 4h) rather than 7 fixed
+  // fractions of the actual [t0,t1] span - the old approach assumed that
+  // span is always exactly 24h and just truncated each fraction's
+  // timestamp to its hour, which only looked right when the real data span
+  // happened to land close to 24h. A shorter/longer span (a data gap, a
+  // freshly-seeded store, stations with unevenly-pruned history) drifted
+  // the labels away from the real clock time, reported live as the
+  // rightmost label reading a stale/mismatched hour.
+  const TICK_INTERVAL_MS = 4 * 60 * 60 * 1000;
+  const tickTimes = [];
+  for (let tt = Math.ceil(t0 / TICK_INTERVAL_MS) * TICK_INTERVAL_MS; tt <= t1; tt += TICK_INTERVAL_MS) {
+    tickTimes.push(tt);
+  }
+  // Falls back to the raw endpoints if the span is too short to contain a
+  // real 4h-aligned boundary (e.g. shortly after a fresh install), so the
+  // axis is never left with zero labels.
+  if (tickTimes.length < 2) tickTimes.push(t0, t1);
+  for (const tt of tickTimes) {
     const xx = x(tt);
     const d = new Date(tt);
     const t = el('text', { class: 'axis-label', x: xx, y: H - 4, 'text-anchor': 'middle' });
-    t.textContent = String(d.getUTCHours()).padStart(2, '0') + ':00';
+    t.textContent = String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0');
     gGrid.appendChild(t);
   }
   svg.appendChild(gGrid);

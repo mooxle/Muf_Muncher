@@ -2,6 +2,10 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.4.2] - 2026-08-05
+### Fixed
+- Ionosonde detail charts' x-axis ticks could show a misleading hour, reported live by Andreas, DN9GU. The old code placed 7 ticks at fixed fractions (0, 4, 8, ... 24 "hours") of the *actual* data span and just truncated each interpolated timestamp to its hour - correct-looking only when that span happened to land close to exactly 24h. A shorter/longer real span (a data gap, a freshly-seeded store, stations with unevenly-pruned history) drifted the labels away from real clock time, most visibly at the right edge. Replaced with genuine calendar-aligned UTC ticks every 4h (00:00/04:00/08:00/.../20:00), positioned via the existing time-to-pixel scale rather than assumed fractions - falls back to labeling the two raw endpoints if the span is too short to contain a real 4h boundary.
+
 ## [1.4.1] - 2026-08-02
 ### Fixed
 - `muf.css`, `mufmuncher-icon.png`, `mufmuncher-llama.png` and `mufmuncher-wave.png` are served with a 4h `Cache-Control` on Cloudflare Pages (they're normally static across runs) but were referenced by plain filename, with nothing to bust that cache on the rare run where one of them *does* change — discovered live on muf.sammet.me right after v1.4.0 shipped: the new `.hero-distance`/`.hdr-locator` CSS rules hadn't reached an already-visited browser, which rendered those elements unstyled (oversized default browser font) while the fresh HTML/payload underneath looked completely normal, since those aren't cached the same way. `render_html()` now appends `?v=<VERSION>` to all four references, so a version bump forces a fresh fetch instead of waiting out the cache window.
