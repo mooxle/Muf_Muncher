@@ -6,7 +6,11 @@ services:
     environment:
       # Maidenhead grid square - picks the two nearest of the ten curated
       # GIRO stations as hero tiles. Defaults to Frankfurt am Main if unset.
-      - MUF_HOME_LOCATOR=
+      # ${VAR:-} (not a literal empty value) so it actually picks up a host
+      # env var, a .env file, or a stack manager's (Portainer, Dockge, ...)
+      # environment panel - the :- default keeps it silently empty (rather
+      # than a Compose "variable not set" warning) when nobody sets it.
+      - MUF_HOME_LOCATOR=${MUF_HOME_LOCATOR:-}
     volumes:
       - muf-data:/data
     restart: unless-stopped

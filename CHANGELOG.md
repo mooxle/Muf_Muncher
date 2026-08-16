@@ -2,6 +2,10 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.4.3] - 2026-08-15
+### Fixed
+- `docker-compose.yml` set `MUF_HOME_LOCATOR` as a literal hardcoded empty value (`- MUF_HOME_LOCATOR=`) instead of `${VAR}` interpolation, reported in [issue #1](https://github.com/mooxle/Muf_Muncher/issues/1) (the project's first). The container always received an empty string no matter what was set outside the compose file - a `.env` file, `docker compose --env-file`, or a stack manager's (Portainer, Dockge, ...) environment panel all had no effect, with no error or warning that the value was being ignored. Now `${MUF_HOME_LOCATOR:-}`, so those actually work; the `:-` default keeps it silently empty (Frankfurt am Main fallback) rather than a Compose "variable not set" warning when nobody sets it.
+
 ## [1.4.2] - 2026-08-05
 ### Fixed
 - Ionosonde detail charts' x-axis ticks could show a misleading hour, reported live by Andreas, DN9GU. The old code placed 7 ticks at fixed fractions (0, 4, 8, ... 24 "hours") of the *actual* data span and just truncated each interpolated timestamp to its hour - correct-looking only when that span happened to land close to exactly 24h. A shorter/longer real span (a data gap, a freshly-seeded store, stations with unevenly-pruned history) drifted the labels away from real clock time, most visibly at the right edge. Replaced with genuine calendar-aligned UTC ticks every 4h (00:00/04:00/08:00/.../20:00), positioned via the existing time-to-pixel scale rather than assumed fractions - falls back to labeling the two raw endpoints if the span is too short to contain a real 4h boundary.
