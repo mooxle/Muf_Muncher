@@ -385,3 +385,14 @@ Andreas, [DN9GU](https://www.qrz.com/db/DN9GU), reported that the ionosonde deta
 ## Transparency
 
 The idea and concept behind this tool were conceived by **Max Sammet (DA6MAX)**. The code was generated with the assistance of [Claude](https://www.anthropic.com/claude) by Anthropic. The header logo artwork (llama icon and waveform) was generated with [Google Gemini](https://gemini.google.com/).
+
+
+## Docker ohne sudo (`maxsammet` in `docker`-Gruppe) — 16.08.2026
+
+Flottenweite Prüfung (`homelab-ansible/adhoc/docker_group_check.yml`)
+ergab: `maxsammet` war auf **keinem** der 13 damals bestehenden
+Docker-Hosts Mitglied der lokalen `docker`-Gruppe — jedes
+Docker-Kommando brauchte `sudo`. Nachgezogen (`usermod -aG docker
+maxsammet`), wirkt ab dem nächsten Login. `adhoc/lxc_create.yml`
+richtet das seither bei jedem neu erstellten Docker-Host automatisch
+mit ein.
