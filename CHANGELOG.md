@@ -2,6 +2,11 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.4.4] - 2026-09-12
+### Fixed
+- The header's "Data updated ... (Xm ago)" freshness dot was computed from when `muf.py` last *ran*, not from the hero stations' actual last successful reading - so a fetch failure that still lets the cron re-render on schedule (exactly what happened live today: GIRO's backend returned `504 Gateway Timeout` for all 10 stations, for hours) kept showing a green dot and "just now" over data that was actually many hours stale. Now derived from the latest real record timestamp across the hero stations instead, falling back to the render time only if a station genuinely has no records yet (fresh install).
+- No outbound request had an explicit timeout, so a source that accepts a connection but never responds - rather than erroring outright - blocked that fetch indefinitely; today's GIRO outage stretched a normal ~15s run to 3+ minutes across all 10 stations. All fetches now time out after 15s. That surfaced a second, pre-existing gap: a bare read timeout raises `TimeoutError`, not `urllib.error.URLError` - 9 of the 10 fetch call sites only caught the latter (only the hero-station fetch had a catch-all), so a timeout there would have crashed the whole run instead of being skipped gracefully like every other fetch failure. Both fixed together.
+
 ## [1.4.3] - 2026-08-15
 ### Fixed
 - `docker-compose.yml` set `MUF_HOME_LOCATOR` as a literal hardcoded empty value (`- MUF_HOME_LOCATOR=`) instead of `${VAR}` interpolation, reported in [issue #1](https://github.com/mooxle/Muf_Muncher/issues/1) (the project's first). The container always received an empty string no matter what was set outside the compose file - a `.env` file, `docker compose --env-file`, or a stack manager's (Portainer, Dockge, ...) environment panel all had no effect, with no error or warning that the value was being ignored. Now `${MUF_HOME_LOCATOR:-}`, so those actually work; the `:-` default keeps it silently empty (Frankfurt am Main fallback) rather than a Compose "variable not set" warning when nobody sets it.

@@ -347,12 +347,20 @@ const dataUpdatedEl = document.getElementById('dataUpdated');
 const dataAgeEl = document.getElementById('dataAge');
 const dataDotEl = document.getElementById('dataDot');
 const generatedAtMs = new Date(DATA.generatedAt).getTime();
+// The actual last-updated signal is the hero stations' latest real reading,
+// not when muf.py last ran - a fetch failure (e.g. GIRO returning 504 for
+// every station, seen live 2026-09-12) still lets the cron re-render on
+// schedule with only stale numbers underneath, which used generatedAt alone
+// to show a green dot and "just now" throughout. Falls back to generatedAt
+// only if a station genuinely has no records yet (fresh install).
+const stationTimes = stations.flatMap(s => s.records.map(r => new Date(r.time).getTime()));
+const latestDataMs = stationTimes.length ? Math.max(...stationTimes) : generatedAtMs;
 
 // How stale is the data actually showing? Green under 20min (normal cron gap),
 // amber up to an hour (cron running late), red beyond that (cron likely broken).
 function updateDataFreshness() {
-  dataUpdatedEl.textContent = new Date(generatedAtMs).toISOString().substr(11, 8);
-  const ageMin = Math.round((Date.now() - generatedAtMs) / 60000);
+  dataUpdatedEl.textContent = new Date(latestDataMs).toISOString().substr(11, 8);
+  const ageMin = Math.round((Date.now() - latestDataMs) / 60000);
   dataAgeEl.textContent = ageMin <= 0 ? 'just now' : ageMin === 1 ? '1m ago' : `${ageMin}m ago`;
   dataDotEl.style.background = ageMin > 60 ? 'var(--critical)' : ageMin > 20 ? 'var(--warning)' : 'var(--good)';
 }

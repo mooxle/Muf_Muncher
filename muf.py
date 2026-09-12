@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 
 import plotext as plt
 
-VERSION = "1.4.3"
+VERSION = "1.4.4"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
@@ -180,6 +180,13 @@ def parse_float_or_none(text):
         return None
 
 
+# Every urlopen() call below sets timeout=15: without one, a source that
+# accepts the connection but never responds (rather than erroring outright)
+# blocks indefinitely - observed live 2026-09-12 when GIRO's backend went
+# down returning nothing for ~20s+ per station before an eventual 504,
+# stretching a normal ~15s run to 3+ minutes across all 10 stations. A
+# timeout still raises urllib.error.URLError, already handled at every call
+# site, so this only bounds the wait - it doesn't change what's caught.
 def fetch_station(station):
     query = urllib.parse.urlencode(
         {
@@ -194,7 +201,7 @@ def fetch_station(station):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
 
     records = []
-    with urllib.request.urlopen(req) as response:
+    with urllib.request.urlopen(req, timeout=15) as response:
         raw_data = response.read().decode("utf-8")
 
     for line in raw_data.splitlines():
@@ -233,7 +240,7 @@ def fetch_ticker_value(station):
     )
     url = f"https://lgdc.uml.edu/fastchar/getbest?{query}"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req) as response:
+    with urllib.request.urlopen(req, timeout=15) as response:
         raw_data = response.read().decode("utf-8")
 
     latest = None
@@ -251,7 +258,7 @@ def fetch_ticker_value(station):
 def fetch_kindex():
     url = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req) as response:
+    with urllib.request.urlopen(req, timeout=15) as response:
         raw = json.loads(response.read().decode("utf-8"))
     records = []
     for row in raw:
@@ -263,7 +270,7 @@ def fetch_kindex():
 def fetch_sfi():
     url = "https://services.swpc.noaa.gov/json/f107_cm_flux.json"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req) as response:
+    with urllib.request.urlopen(req, timeout=15) as response:
         raw = json.loads(response.read().decode("utf-8"))
     records = []
     for row in raw:
@@ -278,7 +285,7 @@ def fetch_xray():
     rating, both computed client-side from this raw series."""
     url = "https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req) as response:
+    with urllib.request.urlopen(req, timeout=15) as response:
         raw = json.loads(response.read().decode("utf-8"))
     records = []
     for row in raw:
@@ -294,7 +301,7 @@ def fetch_solar_wind():
     sparkline, unlike the single-value real-time summary endpoint."""
     url = "https://services.swpc.noaa.gov/json/ace/swepam/ace_swepam_1h.json"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req) as response:
+    with urllib.request.urlopen(req, timeout=15) as response:
         raw = json.loads(response.read().decode("utf-8"))
     records = []
     for row in raw:
@@ -319,7 +326,7 @@ def fetch_ssn():
     point (no trend to show in a sparkline)."""
     url = "https://services.swpc.noaa.gov/text/daily-solar-indices.txt"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req) as response:
+    with urllib.request.urlopen(req, timeout=15) as response:
         raw = response.read().decode("utf-8")
 
     records = []
@@ -394,7 +401,7 @@ def khz_to_band(freq_khz):
 def fetch_pota_spots():
     url = "https://api.pota.app/spot/activator"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req) as response:
+    with urllib.request.urlopen(req, timeout=15) as response:
         raw = json.loads(response.read().decode("utf-8"))
 
     spots = []
@@ -441,7 +448,7 @@ def fetch_latest_release_version():
         GITHUB_LATEST_RELEASE_URL,
         headers={"User-Agent": USER_AGENT, "Accept": "application/vnd.github+json"},
     )
-    with urllib.request.urlopen(req) as response:
+    with urllib.request.urlopen(req, timeout=15) as response:
         raw = json.loads(response.read().decode("utf-8"))
     tag = raw.get("tag_name") or ""
     return tag.lstrip("vV") or None
@@ -450,7 +457,7 @@ def fetch_latest_release_version():
 def fetch_sota_spots():
     url = "https://api-db2.sota.org.uk/api/spots/-1/all"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req) as response:
+    with urllib.request.urlopen(req, timeout=15) as response:
         raw = json.loads(response.read().decode("utf-8"))
 
     spots = []
@@ -670,11 +677,11 @@ print("Fetching space weather indices (NOAA SWPC)...")
 indices = store.get("_indices", {"kindex": [], "sfi": []})
 try:
     indices["kindex"] = merge_and_prune(indices.get("kindex", []), fetch_kindex())
-except (urllib.error.URLError, json.JSONDecodeError) as e:
+except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
     print(f"Failed to fetch K-index: {e}")
 try:
     indices["sfi"] = merge_and_prune(indices.get("sfi", []), fetch_sfi())
-except (urllib.error.URLError, json.JSONDecodeError) as e:
+except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
     print(f"Failed to fetch SFI: {e}")
 # xray/solarWind used to store a single latest-reading dict rather than a
 # history list; discard any leftover dict from that older format instead of
@@ -686,29 +693,29 @@ if not isinstance(indices.get("solarWind"), list):
 
 try:
     indices["xray"] = merge_and_prune(indices.get("xray", []), fetch_xray())
-except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as e:
+except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
     print(f"Failed to fetch X-ray flux: {e}")
 try:
     indices["solarWind"] = merge_and_prune(indices.get("solarWind", []), fetch_solar_wind())
-except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as e:
+except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
     print(f"Failed to fetch solar wind speed: {e}")
 try:
     indices["ssn"] = merge_and_prune(indices.get("ssn", []), fetch_ssn(), prune_cutoff=now - SSN_MAX_AGE)
-except (urllib.error.URLError, urllib.error.HTTPError) as e:
+except (urllib.error.URLError, TimeoutError) as e:
     print(f"Failed to fetch sunspot number: {e}")
 store["_indices"] = indices
 
 print("Fetching POTA activator spots (Europe, HF, last 15min)...")
 try:
     pota_spots = fetch_pota_spots()
-except urllib.error.URLError as e:
+except (urllib.error.URLError, TimeoutError) as e:
     print(f"Failed to fetch POTA spots: {e}")
     pota_spots = []
 
 print("Fetching SOTA activator spots (Europe, HF, last 60min)...")
 try:
     sota_spots = fetch_sota_spots()
-except (urllib.error.URLError, urllib.error.HTTPError) as e:
+except (urllib.error.URLError, TimeoutError) as e:
     print(f"Failed to fetch SOTA spots: {e}")
     sota_spots = []
 
@@ -719,7 +726,7 @@ for code, name in TICKER_STATIONS.items():
     print(f"Fetching ticker value for {name} ({code})...")
     try:
         latest = fetch_ticker_value(code)
-    except (urllib.error.URLError, urllib.error.HTTPError) as e:
+    except (urllib.error.URLError, TimeoutError) as e:
         print(f"Failed to fetch ticker value for {name}: {e}")
         latest = None
     if latest is not None:
@@ -732,7 +739,7 @@ store["_ticker"] = ticker
 print("Checking latest GitHub release...")
 try:
     latest_version = fetch_latest_release_version()
-except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as e:
+except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
     print(f"Failed to fetch latest release version: {e}")
     latest_version = None
 if latest_version is not None:
