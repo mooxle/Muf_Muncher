@@ -2,6 +2,10 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [2.1.1] - 2026-09-13
+### Fixed
+- The Satellite Passes hero tile was visibly shorter than Space Weather right next to it - 2 rows (ISS/SO-50) vs. Space Weather's 5, sized independently to content. Both now sit in a small nested flex group that stretches them to equal height, without affecting the (taller) station cards elsewhere in the same row.
+
 ## [2.1.0] - 2026-09-13
 ### Added
 - Satellite Passes glance tile in the hero row, same size as the Space Weather tile: next-pass countdown ("in 47m") and max elevation for ISS and SO-50, color-rated and updating live every second, linking down to the full card.

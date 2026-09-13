@@ -1078,8 +1078,14 @@ swTile.innerHTML = `
   <div class="sw-row"><span class="k">Wind</span>${swBadge(windNum != null ? Math.round(windNum) + ' km/s' : '–', windTier(windNum))}</div>
   <div class="sw-row"><span class="k">SSN</span>${swBadge(ssnNum != null ? String(ssnNum) : '–', ssnTier(ssnNum))}</div>
 `;
-heroRow.appendChild(swTile);
-heroRow.appendChild(satGlanceTile);
+// Grouped and stretched to equal height together, independent of the two
+// station cards next to them - Satellite Passes only has 2 rows to Space
+// Weather's 5, and would otherwise look visibly shorter in the same row.
+const glanceGroup = document.createElement('div');
+glanceGroup.className = 'hero-glance-group';
+glanceGroup.appendChild(swTile);
+glanceGroup.appendChild(satGlanceTile);
+heroRow.appendChild(glanceGroup);
 
 // ---------------------------------------------------------------- POTA activity
 // Cross-references each spot's band against our own MUF-derived band status

@@ -231,6 +231,11 @@
     flex: 0 0 168px; border-top-color: var(--neutral-series);
     padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
   }
+  /* Stretches its two tiles to match each other's height regardless of how
+     many rows each has - scoped to just this pair via a nested flex
+     container, so it doesn't also pull in the (taller) station cards next
+     to it in .hero-row. */
+  .hero-glance-group { display: flex; align-items: stretch; flex-wrap: wrap; gap: 10px; }
   .hero-sw-tile .sw-title { display: flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral-series); margin-bottom: 2px; }
   .hero-sw-tile .sw-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 12px; }
   .hero-sw-tile .sw-row .k { color: var(--text-secondary); }
@@ -415,5 +420,6 @@
 
   @media (max-width: 700px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
-    .hero-sw-tile { flex-basis: 100%; }
+    .hero-glance-group { flex-basis: 100%; }
+    .hero-glance-group .hero-sw-tile { flex: 1 1 140px; }
   }
