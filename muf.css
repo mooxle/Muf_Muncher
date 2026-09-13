@@ -74,6 +74,7 @@
   }
 
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0;
     background: var(--surface-0);
@@ -137,11 +138,18 @@
      across the full width instead of stacked small in the header corner. */
   .stat-strip {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 20px;
+    border-top: 1px solid var(--border); padding-top: 10px; margin-bottom: 10px;
     font-size: 12.5px; color: var(--text-secondary);
   }
   .stat-strip .stat-item { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
   .stat-strip .stat-sep { width: 1px; height: 13px; background: var(--border); flex: none; }
+
+  /* Deliberately quiet - text links, no button chrome, so this reads as a
+     small utility row rather than competing with the hero row right below
+     it for attention. */
+  .quick-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; color: var(--text-muted); margin-bottom: 14px; }
+  .quick-nav a { color: var(--text-muted); text-decoration: none; border-bottom: 1px solid transparent; }
+  .quick-nav a:hover { color: var(--text-primary); border-color: var(--text-muted); }
   .hdr-utility-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
   .version-link { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); text-decoration: none; }
   .version-link:hover { color: var(--text-primary); }
@@ -362,7 +370,7 @@
   .sat-group-label { font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 650; font-size: 10px; padding: 4px 0; }
   .sat-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
   .sat-row:last-child { border-bottom: none; }
-  .sat-row .dot { flex: none; }
+  .sat-tier-icon { flex: none; display: block; }
   .sat-time { color: var(--text-secondary); }
   .sat-time b { color: var(--text-primary); font-weight: 650; }
   .sat-az { color: var(--text-muted); font-size: 11px; }

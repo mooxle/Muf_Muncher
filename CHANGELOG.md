@@ -2,6 +2,14 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [2.1.0] - 2026-09-13
+### Added
+- Satellite Passes glance tile in the hero row, same size as the Space Weather tile: next-pass countdown ("in 47m") and max elevation for ISS and SO-50, color-rated and updating live every second, linking down to the full card.
+- Quick-nav row between the "GIRO Data updated" line and the hero row - plain, minimal jump links to Activator Activity, Ionosonde Detail, Space Weather, and Satellite Passes, for getting to a section without scrolling past the whole page. Smooth scrolling on anchor jumps.
+
+### Changed
+- Satellite Passes rows now use a green/amber/red signal-bar icon (1-3 bars) instead of a plain colored dot - the bar count doubles up with color, so the good/marginal/poor read still works for a colorblind viewer, not just green vs. amber vs. red. Same icon in the card's legend.
+
 ## [2.0.0] - 2026-09-13
 Version bump to mark this as a milestone release rather than a plain patch bump: the last two releases (Satellite Passes, the new illustrated header/icon) landed together as a genuinely new era for the page - a new feature category beyond propagation/activator data, and the first visual identity change since the original line-art logo. Nothing about the on-disk format, environment variables, or deployment changed, so there's nothing to migrate.
 

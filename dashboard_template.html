@@ -59,6 +59,16 @@
     <span class="stat-item data-updated"><span class="dot" id="dataDot"></span>GIRO Data updated <span id="dataUpdated">--:--:--</span> UTC (<span id="dataAge">-</span>)<button id="reloadBtn" class="reload-btn" type="button" aria-label="Reload dashboard" title="Reload dashboard"><svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M16 4v4h-4M4 16v-4h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.6 11a5.6 5.6 0 0 1 9.5-3.6M15.4 9a5.6 5.6 0 0 1-9.5 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></span>
   </div>
 
+  <nav class="quick-nav" aria-label="Jump to section">
+    <a href="#activator-activity">Activator Activity</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="#ionosonde-detail">Ionosonde Detail</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="#space-weather">Space Weather</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="#satellites">Satellite Passes</a>
+  </nav>
+
   <!-- The answer to "is HF worth it right now": MUF(D) + band chips, per station -->
   <div class="hero-row" id="heroRow"></div>
   <div class="band-legend-shared">
@@ -86,7 +96,7 @@
     <div class="map-cta-sub">live worldwide propagation &middot; prop.kc2g.com</div>
   </a>
 
-  <div class="section-title">
+  <div class="section-title" id="activator-activity">
     <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">
       <path d="M2 16.5 L8 5.5 L11 10.5 L14 4.5 L18.5 16.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
       <path d="M4.6 9.8 L6.6 13.2 H5.7 L7 15.7 H2.2 L3.5 13.2 H2.6 Z" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
@@ -130,9 +140,9 @@
     <div class="chead"><h2>Next ISS &amp; SO-50 Overflights</h2></div>
     <div id="satPassList"></div>
     <div class="band-legend-shared">
-      <span class="item"><span class="sw" style="background:var(--good)"></span>&ge;30&deg; max el.</span>
-      <span class="item"><span class="sw" style="background:var(--warning)"></span>15-30&deg;</span>
-      <span class="item"><span class="sw" style="background:var(--critical)"></span>&lt;15&deg;</span>
+      <span class="item"><svg class="sat-tier-icon" viewBox="0 0 14 11" width="14" height="11" aria-hidden="true"><rect x="0" y="6" width="3.5" height="5" rx="1" fill="var(--good)" stroke="var(--good)" stroke-width="1"/><rect x="5" y="3" width="3.5" height="8" rx="1" fill="var(--good)" stroke="var(--good)" stroke-width="1"/><rect x="10" y="0" width="3.5" height="11" rx="1" fill="var(--good)" stroke="var(--good)" stroke-width="1"/></svg>&ge;30&deg; max el.</span>
+      <span class="item"><svg class="sat-tier-icon" viewBox="0 0 14 11" width="14" height="11" aria-hidden="true"><rect x="0" y="6" width="3.5" height="5" rx="1" fill="var(--warning)" stroke="var(--warning)" stroke-width="1"/><rect x="5" y="3" width="3.5" height="8" rx="1" fill="var(--warning)" stroke="var(--warning)" stroke-width="1"/><rect x="10" y="0" width="3.5" height="11" rx="1" fill="none" stroke="var(--border)" stroke-width="1"/></svg>15-30&deg;</span>
+      <span class="item"><svg class="sat-tier-icon" viewBox="0 0 14 11" width="14" height="11" aria-hidden="true"><rect x="0" y="6" width="3.5" height="5" rx="1" fill="var(--critical)" stroke="var(--critical)" stroke-width="1"/><rect x="5" y="3" width="3.5" height="8" rx="1" fill="none" stroke="var(--border)" stroke-width="1"/><rect x="10" y="0" width="3.5" height="11" rx="1" fill="none" stroke="var(--border)" stroke-width="1"/></svg>&lt;15&deg;</span>
       <span>&mdash; rough guide by max elevation only, real horizon obstructions vary by site</span>
     </div>
     <div class="disclaimer">TLE: celestrak.org &middot; times UTC &middot; azimuth in degrees from true north &middot; elapsed passes drop off this list automatically, new ones appear on the next dashboard reload.</div>
@@ -497,9 +507,70 @@ function azToCompass(deg) {
 // higher chance the real horizon (buildings, trees) blocks it outright,
 // regardless of what's geometrically visible from a flat-earth model.
 function satElevationTier(elDeg) {
-  if (elDeg >= 30) return 'var(--good)';
-  if (elDeg >= 15) return 'var(--warning)';
-  return 'var(--critical)';
+  if (elDeg >= 30) return { tier: 'good', bars: 3 };
+  if (elDeg >= 15) return { tier: 'warning', bars: 2 };
+  return { tier: 'critical', bars: 1 };
+}
+
+// Signal-strength bars rather than a plain dot: the bar count doubles up
+// with color so the good/marginal/poor read is still there for a
+// colorblind reader, not just green/amber/red. ratingColor() is the same
+// good/warning/critical palette the Space Weather tiles use below - defined
+// later in this file, but hoisted, so it's already callable here.
+function satTierIcon(elDeg) {
+  const { tier, bars } = satElevationTier(elDeg);
+  const color = ratingColor(tier).bg;
+  const heights = [5, 8, 11];
+  const rects = heights.map((h, i) => {
+    const x = i * 5;
+    const y = 11 - h;
+    const on = i < bars;
+    return `<rect x="${x}" y="${y}" width="3.5" height="${h}" rx="1" fill="${on ? color : 'none'}" stroke="${on ? color : 'var(--border)'}" stroke-width="1"/>`;
+  }).join('');
+  return `<svg class="sat-tier-icon" viewBox="0 0 14 11" width="14" height="11" aria-hidden="true">${rects}</svg>`;
+}
+
+// Hero-row glance tile, same size/shape as the Space Weather one - built and
+// its live-updating pieces wired up here (ahead of updateClock's first call
+// below, same TDZ reasoning as the SAT_LIST block above), but not inserted
+// into heroRow until the other hero tiles are, further down, so it lands in
+// the right visual order (after the two station cards and Space Weather).
+const satGlanceTile = document.createElement('a');
+satGlanceTile.className = 'hero-sw-tile';
+satGlanceTile.href = '#satellites';
+satGlanceTile.innerHTML = `
+  <div class="sw-title">
+    <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><rect x="8.3" y="8.3" width="3.4" height="3.4" transform="rotate(45 10 10)" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="12.4" y1="7.6" x2="16" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="7.6" y1="12.4" x2="4" y2="16" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M13.5 3 L17 6.5 M3 13.5 L6.5 17" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Satellite Passes
+  </div>
+  <div class="sw-row"><span class="k">ISS</span><span id="satGlanceISS"></span></div>
+  <div class="sw-row"><span class="k">SO-50</span><span id="satGlanceSO50"></span></div>
+`;
+const satGlanceISSEl = satGlanceTile.querySelector('#satGlanceISS');
+const satGlanceSO50El = satGlanceTile.querySelector('#satGlanceSO50');
+
+function nextPassFor(key) {
+  const nowMs = Date.now();
+  return (satellitePasses[key] || []).find(p => new Date(p.los).getTime() > nowMs) || null;
+}
+
+function passCountdownText(pass) {
+  const nowMs = Date.now();
+  const aosMs = new Date(pass.aos).getTime();
+  const losMs = new Date(pass.los).getTime();
+  if (nowMs >= aosMs && nowMs <= losMs) return 'NOW';
+  const minutes = Math.max(0, Math.round((aosMs - nowMs) / 60000));
+  if (minutes < 60) return `in ${minutes}m`;
+  return `in ${Math.floor(minutes / 60)}h${minutes % 60 ? ' ' + (minutes % 60) + 'm' : ''}`;
+}
+
+function updateSatGlanceTile() {
+  for (const [key, el] of [['ISS', satGlanceISSEl], ['SO-50', satGlanceSO50El]]) {
+    const pass = nextPassFor(key);
+    if (!pass) { el.innerHTML = swBadge('&ndash;', null); continue; }
+    const maxElRounded = Math.round(pass.maxEl);
+    el.innerHTML = swBadge(passCountdownText(pass), satElevationTier(maxElRounded).tier, maxElRounded + '&deg;');
+  }
 }
 
 // A blinking colon signals "this is live" without extra text; built as HTML
@@ -538,6 +609,7 @@ function updateClock() {
   updateActivatorFreshness();
   updateSwFreshness();
   renderSatellitePasses();
+  updateSatGlanceTile();
 }
 updateClock();
 setInterval(updateClock, 1000);
@@ -1007,6 +1079,7 @@ swTile.innerHTML = `
   <div class="sw-row"><span class="k">SSN</span>${swBadge(ssnNum != null ? String(ssnNum) : '–', ssnTier(ssnNum))}</div>
 `;
 heroRow.appendChild(swTile);
+heroRow.appendChild(satGlanceTile);
 
 // ---------------------------------------------------------------- POTA activity
 // Cross-references each spot's band against our own MUF-derived band status
@@ -1269,7 +1342,7 @@ function buildSatRow(pass) {
   // which reads as a contradiction against the legend's own 15° cutoff.
   const maxElRounded = Math.round(pass.maxEl);
   row.innerHTML = `
-    <span class="dot" style="background:${satElevationTier(maxElRounded)}"></span>
+    ${satTierIcon(maxElRounded)}
     <span class="sat-time">AOS <b>${formatUpdatedTime(new Date(pass.aos).getTime())}</b> <span class="sat-az">${Math.round(pass.aosAz)}&deg; ${azToCompass(pass.aosAz)}</span></span>
     <span class="sat-arrow">&rarr;</span>
     <span class="sat-time">MAX <b>${maxElRounded}&deg;</b> <span class="sat-az">${Math.round(pass.maxElAz)}&deg; ${azToCompass(pass.maxElAz)}</span></span>
