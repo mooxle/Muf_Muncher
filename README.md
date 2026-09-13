@@ -90,6 +90,7 @@ The dashboard is a static snapshot regenerated on every run — schedule it with
 | **Ionosonde detail** | foF2, MUF(D) and foEs charts for both hero stations, last 24h, with hover tooltips and a per-station legend toggle |
 | **Space Weather** | SFI, Kp (+ G-scale), GOES X-ray flux (+ flare class and R-scale), ACE solar wind speed, and daily sunspot number (SSN) — each with its own tile, sparkline, and a color rating (good/marginal/critical) for HF conditions |
 | **Header** | Live UTC + local clock, your active locator ("Your locator: JO40jg", or "Frankfurt am Main (JO40ic) · default" if unset — highlighted if it's outside the ten stations' coverage), a manual dark/light toggle (persisted across reloads), and the running version linked to source — which lights up with an "update available" badge when `muf.py` finds a newer GitHub release during its cron run |
+| **Data freshness** | The "Data updated" dot/timestamp reflects the hero stations' actual latest reading, not just when `muf.py` last ran — color and wording scale to each source's own update cadence (GIRO/POTA ~15min, SOTA ~60min), calling out "likely a data issue upstream" once a source misses ~2 cycles, and adding the date once the last reading isn't from today. Activator Activity's own POTA/SOTA fetch times are shown independently in its footer, so a GIRO-side outage doesn't make POTA/SOTA look stale too, or vice versa |
 | **Home screen ready** | A reload button and a manual pull-to-refresh gesture, since iOS strips native pull-to-refresh once the page is added to the home screen as a standalone web app |
 
 ![MUF Muncher — MUF(D), foF2 and foEs charts with hover crosshair and legend toggle](MUF_Screener2.png)
@@ -117,7 +118,7 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "MufMuncher/1.4.4 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/1.5.0 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \

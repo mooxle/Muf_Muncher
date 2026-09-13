@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 
 import plotext as plt
 
-VERSION = "1.4.4"
+VERSION = "1.5.0"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
@@ -604,6 +604,8 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
         ],
         "indices": store.get("_indices", {"kindex": [], "sfi": []}),
         "activatorSpots": activator_spots,
+        "potaFetchedAt": store.get("_meta", {}).get("potaFetchedAt"),
+        "sotaFetchedAt": store.get("_meta", {}).get("sotaFetchedAt"),
         "tickerStations": [
             {
                 "code": code,
@@ -705,9 +707,18 @@ except (urllib.error.URLError, TimeoutError) as e:
     print(f"Failed to fetch sunspot number: {e}")
 store["_indices"] = indices
 
+# Timestamp of each source's last *successful* fetch, persisted across runs
+# like the station/ticker stores - lets the dashboard show its own "last
+# updated" per source instead of implying POTA/SOTA are as stale as GIRO
+# whenever GIRO (a completely independent source) is having an outage, and
+# vice versa. Only touched on success, so a failed cycle doesn't erase how
+# long it's actually been since real data came in.
+meta = store.get("_meta", {})
+
 print("Fetching POTA activator spots (Europe, HF, last 15min)...")
 try:
     pota_spots = fetch_pota_spots()
+    meta["potaFetchedAt"] = now.strftime(ISO_FORM)
 except (urllib.error.URLError, TimeoutError) as e:
     print(f"Failed to fetch POTA spots: {e}")
     pota_spots = []
@@ -715,9 +726,11 @@ except (urllib.error.URLError, TimeoutError) as e:
 print("Fetching SOTA activator spots (Europe, HF, last 60min)...")
 try:
     sota_spots = fetch_sota_spots()
+    meta["sotaFetchedAt"] = now.strftime(ISO_FORM)
 except (urllib.error.URLError, TimeoutError) as e:
     print(f"Failed to fetch SOTA spots: {e}")
     sota_spots = []
+store["_meta"] = meta
 
 activator_spots = sorted(pota_spots + sota_spots, key=lambda s: s["spotTime"], reverse=True)
 

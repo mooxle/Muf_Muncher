@@ -2,6 +2,12 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.5.0] - 2026-09-13
+### Added
+- Follow-up to yesterday's GIRO outage, prompted by feedback while it was still ongoing: the "Data updated" timestamp now shows the date too once the last reading isn't from today - a bare "08:40:00" is ambiguous once an outage runs past midnight UTC (which this one did), and a viewer glancing at it would reasonably assume it meant today.
+- Freshness color/wording now scales to each source's own update cadence instead of one fixed pair of thresholds (GIRO/POTA ~15min, SOTA ~60min), and calls out "likely a data issue upstream"/"likely stale" in text once a source misses ~2 cycles - not just a color change, since that's easy to skim past on a quick glance.
+- POTA and SOTA get their own independent "last updated" in the Activator Activity footer, tracked from each source's last *successful* fetch (persisted across runs, like the station/ticker stores). Previously the only freshness signal on the whole page was GIRO-derived, so a GIRO-only outage made the (perfectly fine) activator list look stale too, and there was no way to tell if POTA/SOTA themselves were having their own issue.
+
 ## [1.4.4] - 2026-09-12
 ### Fixed
 - The header's "Data updated ... (Xm ago)" freshness dot was computed from when `muf.py` last *ran*, not from the hero stations' actual last successful reading - so a fetch failure that still lets the cron re-render on schedule (exactly what happened live today: GIRO's backend returned `504 Gateway Timeout` for all 10 stations, for hours) kept showing a green dot and "just now" over data that was actually many hours stale. Now derived from the latest real record timestamp across the hero stations instead, falling back to the render time only if a station genuinely has no records yet (fresh install).

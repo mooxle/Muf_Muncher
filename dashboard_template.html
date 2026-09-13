@@ -103,7 +103,7 @@
     <div class="pota-filters" id="potaFilters"></div>
     <div id="potaList"></div>
     <button class="pota-showmore" id="potaShowMoreBtn" type="button"></button>
-    <div class="disclaimer">Source: pota.app (last 15 min) &middot; api-db2.sota.org.uk (last 60 min) &middot; refreshed each dashboard cycle &middot; band colors cross-reference the Band Opening estimate above.</div>
+    <div class="disclaimer" id="activatorDisclaimer">Source: pota.app (last 15 min) &middot; api-db2.sota.org.uk (last 60 min) &middot; refreshed each dashboard cycle &middot; band colors cross-reference the Band Opening estimate above.</div>
   </div>
 
   <div class="section-title" id="ionosonde-detail">
@@ -356,13 +356,58 @@ const generatedAtMs = new Date(DATA.generatedAt).getTime();
 const stationTimes = stations.flatMap(s => s.records.map(r => new Date(r.time).getTime()));
 const latestDataMs = stationTimes.length ? Math.max(...stationTimes) : generatedAtMs;
 
-// How stale is the data actually showing? Green under 20min (normal cron gap),
-// amber up to an hour (cron running late), red beyond that (cron likely broken).
+// How stale is a source's data, relative to its own update cadence rather
+// than one fixed number - GIRO/POTA refresh every ~15min, SOTA only every
+// ~60min, so "30min old" is a missed cycle for one and unremarkable for the
+// other. "Broken" (~2 missed cycles) gets called out in text too, not just
+// color, since color alone is easy to skim past on a quick glance.
+function freshnessInfo(lastMs, cadenceMin) {
+  const ageMin = Math.round((Date.now() - lastMs) / 60000);
+  const warnAt = cadenceMin * 1.34;
+  const brokenAt = cadenceMin * 2;
+  const color = ageMin >= brokenAt ? 'var(--critical)' : ageMin >= warnAt ? 'var(--warning)' : 'var(--good)';
+  return { ageMin, color, isBroken: ageMin >= brokenAt };
+}
+
+function formatAge(ageMin) {
+  return ageMin <= 0 ? 'just now' : ageMin === 1 ? '1m ago' : `${ageMin}m ago`;
+}
+
 function updateDataFreshness() {
-  dataUpdatedEl.textContent = new Date(latestDataMs).toISOString().substr(11, 8);
-  const ageMin = Math.round((Date.now() - latestDataMs) / 60000);
-  dataAgeEl.textContent = ageMin <= 0 ? 'just now' : ageMin === 1 ? '1m ago' : `${ageMin}m ago`;
-  dataDotEl.style.background = ageMin > 60 ? 'var(--critical)' : ageMin > 20 ? 'var(--warning)' : 'var(--good)';
+  const { ageMin, color, isBroken } = freshnessInfo(latestDataMs, 15);
+  const d = new Date(latestDataMs);
+  const isoDate = d.toISOString().slice(0, 10);
+  const timePart = d.toISOString().substr(11, 8);
+  // A bare time ("08:40:00") is ambiguous once the data is old enough to be
+  // from a different day than "now" - GIRO's 2026-09-12 outage ran well past
+  // midnight UTC, and a viewer glancing at just the time would reasonably
+  // assume it meant today. Only add the date once it's actually needed.
+  const sameUTCDay = isoDate === new Date().toISOString().slice(0, 10);
+  dataUpdatedEl.textContent = sameUTCDay ? timePart : `${isoDate} ${timePart}`;
+  dataAgeEl.textContent = formatAge(ageMin) + (isBroken ? ' — likely a data issue upstream' : '');
+  dataDotEl.style.background = color;
+}
+
+// POTA and SOTA are independent sources with their own fetch success/failure
+// - showing their own "last updated" here (rather than only the GIRO-derived
+// stat above) means a POTA/SOTA-side hiccup is visible on its own, and a
+// GIRO-side one (like 2026-09-12) doesn't make this list look stale too when
+// it isn't.
+const activatorDisclaimerEl = document.getElementById('activatorDisclaimer');
+const potaFetchedAtMs = DATA.potaFetchedAt ? new Date(DATA.potaFetchedAt).getTime() : null;
+const sotaFetchedAtMs = DATA.sotaFetchedAt ? new Date(DATA.sotaFetchedAt).getTime() : null;
+
+function sourceFreshnessText(fetchedAtMs, cadenceMin) {
+  if (fetchedAtMs == null) return '';
+  const { ageMin, isBroken } = freshnessInfo(fetchedAtMs, cadenceMin);
+  return `, updated ${formatAge(ageMin)}${isBroken ? ' — likely stale' : ''}`;
+}
+
+function updateActivatorFreshness() {
+  activatorDisclaimerEl.textContent =
+    `Source: pota.app (last 15 min${sourceFreshnessText(potaFetchedAtMs, 15)}) · ` +
+    `api-db2.sota.org.uk (last 60 min${sourceFreshnessText(sotaFetchedAtMs, 60)}) · ` +
+    `refreshed each dashboard cycle · band colors cross-reference the Band Opening estimate above.`;
 }
 
 // A blinking colon signals "this is live" without extra text; built as HTML
@@ -398,6 +443,7 @@ function updateClock() {
   localTzEl.textContent = offsetHours >= 2 ? 'CEST' : 'CET';
 
   updateDataFreshness();
+  updateActivatorFreshness();
 }
 updateClock();
 setInterval(updateClock, 1000);
