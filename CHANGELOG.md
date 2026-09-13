@@ -2,6 +2,10 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.5.2] - 2026-09-13
+### Fixed
+- The "GIRO Data updated" freshness dot could show green/"just now" while the hero stations had zero data at all: it computed the last real reading only from the two hero stations' records, and once the ongoing GIRO outage passed the 24h retention window, `merge_and_prune` legitimately pruned their entire history to nothing (`stationTimes.length === 0`), which fell back to `generatedAt` (render time, i.e. "now") - the exact "just re-rendered on schedule, but the underlying data is stale" bug v1.4.4 already fixed for the case where records still existed. Now also considers the ticker's 8 other GIRO stations (never pruned by age), so the real last-known reading from ~26h ago surfaces correctly as critically stale instead of the fallback pretending it's fresh; falls back to an explicit "no data received yet" (not "just now") only if literally no GIRO station - hero or ticker - has ever returned a reading.
+
 ## [1.5.1] - 2026-09-13
 ### Changed
 - v1.5.0's freshness indicators were live for about an hour before feedback made clear they needed more visual weight: the page-wide "Data updated" stat is now explicitly "GIRO Data updated" (it was always GIRO-derived, but the generic label didn't say so), and POTA/SOTA's freshness moved out of the Activator Activity footer's small print into its own prominent "POTA/SOTA Data updated" line, in the same dot+bold-text style as the GIRO one, directly above the list.
