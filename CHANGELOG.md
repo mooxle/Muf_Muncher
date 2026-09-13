@@ -2,6 +2,13 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [2.1.2] - 2026-09-13
+### Fixed
+- The Space Weather / Satellite Passes tile pair fell back to a narrow stacked column instead of sitting side by side once the viewport was wide enough for the station cards to grow past their base width - a wrapping flex container's shrink-to-fit width can collapse to its largest single child instead of the sum of all of them when left as `flex-basis: auto`. Pinned to `flex: 0 0 346px` (168+168+gap) so it reliably reserves the right width regardless of how much room the station cards next to it end up with.
+
+### Changed
+- Updated header banner artwork - a few wordmark letters weren't cleanly transparent. Regenerated the dark-mode variant from the fixed source.
+
 ## [2.1.1] - 2026-09-13
 ### Fixed
 - The Satellite Passes hero tile was visibly shorter than Space Weather right next to it - 2 rows (ISS/SO-50) vs. Space Weather's 5, sized independently to content. Both now sit in a small nested flex group that stretches them to equal height, without affecting the (taller) station cards elsewhere in the same row.

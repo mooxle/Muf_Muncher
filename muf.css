@@ -235,7 +235,12 @@
      many rows each has - scoped to just this pair via a nested flex
      container, so it doesn't also pull in the (taller) station cards next
      to it in .hero-row. */
-  .hero-glance-group { display: flex; align-items: stretch; flex-wrap: wrap; gap: 10px; }
+  /* flex: 0 0 346px (168+168+gap) pins this to its two tiles' combined
+     width - left as flex-basis:auto, a wrapping flex container's own
+     shrink-to-fit width can collapse to a single child's width instead of
+     their sum, which put the two tiles in a narrow stacked column even on
+     a wide viewport with room to spare. */
+  .hero-glance-group { display: flex; align-items: stretch; flex-wrap: wrap; gap: 10px; flex: 0 0 346px; }
   .hero-sw-tile .sw-title { display: flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--neutral-series); margin-bottom: 2px; }
   .hero-sw-tile .sw-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 12px; }
   .hero-sw-tile .sw-row .k { color: var(--text-secondary); }
