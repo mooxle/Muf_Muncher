@@ -6,8 +6,8 @@
 !dashboard_template.html
 !requirements.txt
 !mufmuncher-icon.png
-!mufmuncher-llama.png
-!mufmuncher-wave.png
+!mufmuncher-banner.png
+!mufmuncher-banner-dark.png
 !muf.css
 !entrypoint.sh
 !muf-cron
