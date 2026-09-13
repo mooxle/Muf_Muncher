@@ -280,6 +280,16 @@
   .chart-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px 8px; margin-bottom: 14px; }
   .chart-card .chead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; flex-wrap: wrap; gap: 8px; }
   .chart-card h2 { font-size: 13px; font-weight: 650; margin: 0; }
+  /* Same dot+bold-text treatment as the page-level "GIRO Data updated" stat
+     (.data-updated below), reused here so a section's own data freshness
+     reads as equally prominent instead of buried in its small-print
+     disclaimer - just scoped to sit inside a card instead of the header. */
+  .card-freshness {
+    display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    font-size: 12.5px; font-weight: 600; color: var(--text-secondary);
+    font-variant-numeric: tabular-nums; margin-bottom: 10px;
+  }
+  .card-freshness .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); flex: none; }
   .legend { display: flex; gap: 6px; flex-wrap: wrap; }
   .legend button {
     display: flex; align-items: center; gap: 6px; font: inherit; font-size: 11.5px; color: var(--text-secondary);

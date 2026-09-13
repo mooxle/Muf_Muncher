@@ -2,6 +2,11 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.5.1] - 2026-09-13
+### Changed
+- v1.5.0's freshness indicators were live for about an hour before feedback made clear they needed more visual weight: the page-wide "Data updated" stat is now explicitly "GIRO Data updated" (it was always GIRO-derived, but the generic label didn't say so), and POTA/SOTA's freshness moved out of the Activator Activity footer's small print into its own prominent "POTA/SOTA Data updated" line, in the same dot+bold-text style as the GIRO one, directly above the list.
+- Space Weather gets the same treatment for consistency: a new "Space Weather Data updated" line above its indices, tracking the four NOAA feeds behind it (kindex, SFI, X-ray, solar wind - SSN stays excluded, see v1.5.0). When sources disagree (e.g. X-ray failing while the others are fine), it shows whichever is furthest behind relative to its own cadence, same logic as the POTA/SOTA line.
+
 ## [1.5.0] - 2026-09-13
 ### Added
 - Follow-up to yesterday's GIRO outage, prompted by feedback while it was still ongoing: the "Data updated" timestamp now shows the date too once the last reading isn't from today - a bare "08:40:00" is ambiguous once an outage runs past midnight UTC (which this one did), and a viewer glancing at it would reasonably assume it meant today.

@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 
 import plotext as plt
 
-VERSION = "1.5.0"
+VERSION = "1.5.1"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
@@ -606,6 +606,10 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
         "activatorSpots": activator_spots,
         "potaFetchedAt": store.get("_meta", {}).get("potaFetchedAt"),
         "sotaFetchedAt": store.get("_meta", {}).get("sotaFetchedAt"),
+        "kindexFetchedAt": store.get("_meta", {}).get("kindexFetchedAt"),
+        "sfiFetchedAt": store.get("_meta", {}).get("sfiFetchedAt"),
+        "xrayFetchedAt": store.get("_meta", {}).get("xrayFetchedAt"),
+        "solarWindFetchedAt": store.get("_meta", {}).get("solarWindFetchedAt"),
         "tickerStations": [
             {
                 "code": code,
@@ -675,14 +679,24 @@ for station, name in stations.items():
     data[name] = (times, fof2, muf, foEs)
     _time.sleep(0.75)  # spread out GIRO/lgdc.uml.edu requests, avoid tripping its rate limiter
 
+# Timestamp of each source's last *successful* fetch, persisted across runs
+# like the station/ticker stores - lets the dashboard show its own "last
+# updated" per source instead of implying everything is as stale as whichever
+# one happens to be having an outage. SSN is deliberately excluded: it's a
+# once-daily reading (see SSN_MAX_AGE below), so tracking it at the same
+# 15min cadence as everything else would make it look permanently "broken."
+meta = store.get("_meta", {})
+
 print("Fetching space weather indices (NOAA SWPC)...")
 indices = store.get("_indices", {"kindex": [], "sfi": []})
 try:
     indices["kindex"] = merge_and_prune(indices.get("kindex", []), fetch_kindex())
+    meta["kindexFetchedAt"] = now.strftime(ISO_FORM)
 except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
     print(f"Failed to fetch K-index: {e}")
 try:
     indices["sfi"] = merge_and_prune(indices.get("sfi", []), fetch_sfi())
+    meta["sfiFetchedAt"] = now.strftime(ISO_FORM)
 except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
     print(f"Failed to fetch SFI: {e}")
 # xray/solarWind used to store a single latest-reading dict rather than a
@@ -695,10 +709,12 @@ if not isinstance(indices.get("solarWind"), list):
 
 try:
     indices["xray"] = merge_and_prune(indices.get("xray", []), fetch_xray())
+    meta["xrayFetchedAt"] = now.strftime(ISO_FORM)
 except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
     print(f"Failed to fetch X-ray flux: {e}")
 try:
     indices["solarWind"] = merge_and_prune(indices.get("solarWind", []), fetch_solar_wind())
+    meta["solarWindFetchedAt"] = now.strftime(ISO_FORM)
 except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
     print(f"Failed to fetch solar wind speed: {e}")
 try:
@@ -706,14 +722,6 @@ try:
 except (urllib.error.URLError, TimeoutError) as e:
     print(f"Failed to fetch sunspot number: {e}")
 store["_indices"] = indices
-
-# Timestamp of each source's last *successful* fetch, persisted across runs
-# like the station/ticker stores - lets the dashboard show its own "last
-# updated" per source instead of implying POTA/SOTA are as stale as GIRO
-# whenever GIRO (a completely independent source) is having an outage, and
-# vice versa. Only touched on success, so a failed cycle doesn't erase how
-# long it's actually been since real data came in.
-meta = store.get("_meta", {})
 
 print("Fetching POTA activator spots (Europe, HF, last 15min)...")
 try:

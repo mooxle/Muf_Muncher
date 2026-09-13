@@ -59,7 +59,7 @@
     </div>
   </div>
   <div class="stat-strip">
-    <span class="stat-item data-updated"><span class="dot" id="dataDot"></span>Data updated <span id="dataUpdated">--:--:--</span> UTC (<span id="dataAge">-</span>)<button id="reloadBtn" class="reload-btn" type="button" aria-label="Reload dashboard" title="Reload dashboard"><svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M16 4v4h-4M4 16v-4h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.6 11a5.6 5.6 0 0 1 9.5-3.6M15.4 9a5.6 5.6 0 0 1-9.5 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></span>
+    <span class="stat-item data-updated"><span class="dot" id="dataDot"></span>GIRO Data updated <span id="dataUpdated">--:--:--</span> UTC (<span id="dataAge">-</span>)<button id="reloadBtn" class="reload-btn" type="button" aria-label="Reload dashboard" title="Reload dashboard"><svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M16 4v4h-4M4 16v-4h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.6 11a5.6 5.6 0 0 1 9.5-3.6M15.4 9a5.6 5.6 0 0 1-9.5 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></span>
   </div>
 
   <!-- The answer to "is HF worth it right now": MUF(D) + band chips, per station -->
@@ -100,6 +100,7 @@
     <div class="chead">
       <h2>Live POTA &amp; SOTA Activators &mdash; Europe, HF</h2>
     </div>
+    <div class="card-freshness"><span class="dot" id="activatorDot"></span>POTA/SOTA Data updated <span id="activatorUpdated">--:--:--</span> UTC (<span id="activatorAge">-</span>)</div>
     <div class="pota-filters" id="potaFilters"></div>
     <div id="potaList"></div>
     <button class="pota-showmore" id="potaShowMoreBtn" type="button"></button>
@@ -119,6 +120,7 @@
   </div>
   <div class="chart-card">
     <div class="chead"><h2>Solar Flux, Geomagnetic &amp; Radio Blackout Indices</h2></div>
+    <div class="card-freshness"><span class="dot" id="swDot"></span>Space Weather Data updated <span id="swUpdated">--:--:--</span> UTC (<span id="swAge">-</span>)</div>
     <div class="kpi-row" id="swKpiRow"></div>
     <div class="disclaimer">SFI &amp; Kp: NOAA SWPC (services.swpc.noaa.gov), global (not station-specific). X-ray flux: NOAA SWPC / GOES primary X-ray sensor. Solar wind speed: NOAA SWPC / ACE SWEPAM. Sunspot number: NOAA/SESC daily solar data, once per day &mdash; kept for 30 days (everything else on this page: 24h).</div>
   </div>
@@ -373,19 +375,43 @@ function formatAge(ageMin) {
   return ageMin <= 0 ? 'just now' : ageMin === 1 ? '1m ago' : `${ageMin}m ago`;
 }
 
-function updateDataFreshness() {
-  const { ageMin, color, isBroken } = freshnessInfo(latestDataMs, 15);
-  const d = new Date(latestDataMs);
+// A bare time ("08:40:00") is ambiguous once the data is old enough to be
+// from a different day than "now" - GIRO's 2026-09-12 outage ran well past
+// midnight UTC, and a viewer glancing at just the time would reasonably
+// assume it meant today. Only add the date once it's actually needed.
+function formatUpdatedTime(ms) {
+  const d = new Date(ms);
   const isoDate = d.toISOString().slice(0, 10);
   const timePart = d.toISOString().substr(11, 8);
-  // A bare time ("08:40:00") is ambiguous once the data is old enough to be
-  // from a different day than "now" - GIRO's 2026-09-12 outage ran well past
-  // midnight UTC, and a viewer glancing at just the time would reasonably
-  // assume it meant today. Only add the date once it's actually needed.
   const sameUTCDay = isoDate === new Date().toISOString().slice(0, 10);
-  dataUpdatedEl.textContent = sameUTCDay ? timePart : `${isoDate} ${timePart}`;
-  dataAgeEl.textContent = formatAge(ageMin) + (isBroken ? ' — likely a data issue upstream' : '');
-  dataDotEl.style.background = color;
+  return sameUTCDay ? timePart : `${isoDate} ${timePart}`;
+}
+
+// Renders one "<label> Data updated ..." stat line given a last-success
+// timestamp and that source's own update cadence.
+function renderFreshnessLine(dotEl, updatedEl, ageEl, ms, cadenceMin) {
+  const { ageMin, color, isBroken } = freshnessInfo(ms, cadenceMin);
+  updatedEl.textContent = formatUpdatedTime(ms);
+  ageEl.textContent = formatAge(ageMin) + (isBroken ? ' — likely a data issue upstream' : '');
+  dotEl.style.background = color;
+}
+
+// Some stat lines represent more than one independent source (POTA+SOTA,
+// or the four NOAA feeds behind Space Weather). Each has its own cadence,
+// so comparing raw ages would always make the slowest-cadence source look
+// the most "overdue" even when perfectly healthy - comparing age relative
+// to cadence picks whichever source is actually the most behind on its own
+// schedule. In the normal case all given sources update on the same cron
+// cycle and are identical, so this only matters once one of them fails.
+function worstSource(candidates) {
+  const known = candidates.filter((c) => c.ms != null);
+  if (!known.length) return null;
+  const ratio = (c) => (Date.now() - c.ms) / c.cadenceMin;
+  return known.reduce((worst, c) => (ratio(c) > ratio(worst) ? c : worst));
+}
+
+function updateDataFreshness() {
+  renderFreshnessLine(dataDotEl, dataUpdatedEl, dataAgeEl, latestDataMs, 15);
 }
 
 // POTA and SOTA are independent sources with their own fetch success/failure
@@ -393,21 +419,40 @@ function updateDataFreshness() {
 // stat above) means a POTA/SOTA-side hiccup is visible on its own, and a
 // GIRO-side one (like 2026-09-12) doesn't make this list look stale too when
 // it isn't.
-const activatorDisclaimerEl = document.getElementById('activatorDisclaimer');
+const activatorDotEl = document.getElementById('activatorDot');
+const activatorUpdatedEl = document.getElementById('activatorUpdated');
+const activatorAgeEl = document.getElementById('activatorAge');
 const potaFetchedAtMs = DATA.potaFetchedAt ? new Date(DATA.potaFetchedAt).getTime() : null;
 const sotaFetchedAtMs = DATA.sotaFetchedAt ? new Date(DATA.sotaFetchedAt).getTime() : null;
 
-function sourceFreshnessText(fetchedAtMs, cadenceMin) {
-  if (fetchedAtMs == null) return '';
-  const { ageMin, isBroken } = freshnessInfo(fetchedAtMs, cadenceMin);
-  return `, updated ${formatAge(ageMin)}${isBroken ? ' — likely stale' : ''}`;
+function updateActivatorFreshness() {
+  const worst = worstSource([
+    { ms: potaFetchedAtMs, cadenceMin: 15 },
+    { ms: sotaFetchedAtMs, cadenceMin: 60 },
+  ]);
+  if (!worst) return;
+  renderFreshnessLine(activatorDotEl, activatorUpdatedEl, activatorAgeEl, worst.ms, worst.cadenceMin);
 }
 
-function updateActivatorFreshness() {
-  activatorDisclaimerEl.textContent =
-    `Source: pota.app (last 15 min${sourceFreshnessText(potaFetchedAtMs, 15)}) · ` +
-    `api-db2.sota.org.uk (last 60 min${sourceFreshnessText(sotaFetchedAtMs, 60)}) · ` +
-    `refreshed each dashboard cycle · band colors cross-reference the Band Opening estimate above.`;
+// Same idea for the four NOAA feeds behind Space Weather (SSN excluded - see
+// muf.py, it's a once-daily reading and would always look "broken" here).
+const swDotEl = document.getElementById('swDot');
+const swUpdatedEl = document.getElementById('swUpdated');
+const swAgeEl = document.getElementById('swAge');
+const kindexFetchedAtMs = DATA.kindexFetchedAt ? new Date(DATA.kindexFetchedAt).getTime() : null;
+const sfiFetchedAtMs = DATA.sfiFetchedAt ? new Date(DATA.sfiFetchedAt).getTime() : null;
+const xrayFetchedAtMs = DATA.xrayFetchedAt ? new Date(DATA.xrayFetchedAt).getTime() : null;
+const solarWindFetchedAtMs = DATA.solarWindFetchedAt ? new Date(DATA.solarWindFetchedAt).getTime() : null;
+
+function updateSwFreshness() {
+  const worst = worstSource([
+    { ms: kindexFetchedAtMs, cadenceMin: 15 },
+    { ms: sfiFetchedAtMs, cadenceMin: 15 },
+    { ms: xrayFetchedAtMs, cadenceMin: 15 },
+    { ms: solarWindFetchedAtMs, cadenceMin: 15 },
+  ]);
+  if (!worst) return;
+  renderFreshnessLine(swDotEl, swUpdatedEl, swAgeEl, worst.ms, worst.cadenceMin);
 }
 
 // A blinking colon signals "this is live" without extra text; built as HTML
@@ -444,6 +489,7 @@ function updateClock() {
 
   updateDataFreshness();
   updateActivatorFreshness();
+  updateSwFreshness();
 }
 updateClock();
 setInterval(updateClock, 1000);
