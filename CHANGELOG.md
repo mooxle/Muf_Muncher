@@ -2,6 +2,12 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [2.0.0] - 2026-09-13
+Version bump to mark this as a milestone release rather than a plain patch bump: the last two releases (Satellite Passes, the new illustrated header/icon) landed together as a genuinely new era for the page - a new feature category beyond propagation/activator data, and the first visual identity change since the original line-art logo. Nothing about the on-disk format, environment variables, or deployment changed, so there's nothing to migrate.
+
+### Changed
+- README refreshed: new banner at the top (light/dark via a `<picture>` tag, so it renders correctly in GitHub's own dark mode too), regenerated Desktop/Mobile/detail screenshots reflecting the new header and current layout, and a new screenshot for the Satellite Passes card. File-reference mentions of the retired `mufmuncher-llama.png`/`mufmuncher-wave.png` updated to the new banner assets throughout.
+
 ## [1.6.1] - 2026-09-13
 ### Changed
 - New header identity: the line-art llama + separate wordmark/waveform/tagline are replaced by one illustrated banner (full-color llama, "MUF MUNCHER" wordmark, waveform divider and tagline all in a single image). A second variant with just the baked-in tagline text recolored stands in for dark mode - the wordmark/llama colors already read fine on both themes, but the tagline was a fixed dark gray, and inverting the whole image (the old trick for the pure line-art assets) would have wrecked the llama's own gradient shading. The page's `<h1>` text moves to a visually-hidden but screen-reader/SEO-visible heading, since the image now carries the title visually with an equivalent `alt`.

@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="mufmuncher-header-hero.png" width="380" alt="MUF Muncher — Is HF worth it right now, and where?">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="mufmuncher-banner-dark.png">
+    <img src="mufmuncher-banner.png" width="380" alt="MUF Muncher — Is HF worth it right now, and where?">
+  </picture>
 </p>
 
 > A self-hosted HF propagation dashboard for mid-Europe hams — MUF(D), foF2 and Sporadic-E from ten European ionosondes, full NOAA space weather (SFI, Kp, X-ray, solar wind), and live POTA activator spots, all cross-referenced into one glance-and-go page.
@@ -98,6 +101,8 @@ The dashboard is a static snapshot regenerated on every run — schedule it with
 
 ![MUF Muncher — Space Weather tiles (SFI, Kp, X-ray, solar wind) with color ratings and Kp history](MUF_Screener3.png)
 
+![MUF Muncher — Satellite Passes: next ISS & SO-50 overflights with AOS/max-elevation/LOS times, azimuths, and a go/skip dot by max elevation](MUF_Screener4.png)
+
 ---
 
 ## Data Sources & API Calls
@@ -119,7 +124,7 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "MufMuncher/1.6.1 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/2.0.0 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \
@@ -263,7 +268,7 @@ muf.py (runs every 15 min via cron)
   ├─ render_html()          → copies dashboard_template.html verbatim to dashboard.html
   │                           (+ index.html, muf/index.html), writes the merged JSON to
   │                           muf_payload.json, and copies muf.css + mufmuncher-icon.png +
-  │                           mufmuncher-llama.png + mufmuncher-wave.png alongside every one of them
+  │                           mufmuncher-banner.png + mufmuncher-banner-dark.png alongside every one of them
   └─ render_summary()       → a small flat summary.json (latest values only),
                               for external dashboards (e.g. gethomepage/homepage)
                               that can't index "the last item" of a variable-length array
@@ -271,7 +276,7 @@ muf.py (runs every 15 min via cron)
 
 The dashboard itself (`dashboard_template.html`) is intentionally dependency-free: no charting library, no npm, no build step. All the SVG line charts, the hover crosshair, the legend toggle, and the KPI tiles are vanilla JS drawing directly into `<svg>` elements.
 
-**Static vs. dynamic, and why they're split into separate files:** `muf.css`, `mufmuncher-icon.png`, `mufmuncher-llama.png` and `mufmuncher-wave.png` never change between runs, so they're real static files the browser caches normally across reloads - earlier versions inlined the icon directly into the HTML (base64-encoded, ~30KB, and ended up embedded three times over via a template placeholder, since it's referenced by the favicon, apple-touch-icon, and header logo - all from one page's markup, not even across reloads). The header logo is line art (a llama outline + a waveform divider) processed down to pure black strokes on a transparent background, so a single `filter: invert(1)` in dark mode is enough to make it read on both themes - no second asset needed. `muf_payload.json` *does* change every cron cycle, so it's still re-fetched every load, but keeping it as its own file (rather than inlined as `const DATA = {...}`) means a browser reload within the same 15-minute window can still get a `304 Not Modified` instead of re-transferring the full payload - and the reload button / pull-to-refresh gesture make that a common case. The one trade-off: the page now needs a `fetch()` at load time, so it must be served over `http(s)://`, not opened directly via `file://` (see [Quick Start](#quick-start) for the `MUF_INLINE_PAYLOAD=1` escape hatch if you want `file://` back).
+**Static vs. dynamic, and why they're split into separate files:** `muf.css`, `mufmuncher-icon.png`, `mufmuncher-banner.png` and `mufmuncher-banner-dark.png` never change between runs, so they're real static files the browser caches normally across reloads - earlier versions inlined the icon directly into the HTML (base64-encoded, ~30KB, and ended up embedded three times over via a template placeholder, since it's referenced by the favicon, apple-touch-icon, and header logo - all from one page's markup, not even across reloads). The header banner is a full-color illustration, not line art, so the old single-asset `filter: invert(1)` trick for dark mode (fine for pure black strokes on transparent) would have wrecked its gradient shading - it ships as two pre-rendered variants instead, swapped by CSS depending on theme, with only the banner's baked-in tagline text recolored between them. `muf_payload.json` *does* change every cron cycle, so it's still re-fetched every load, but keeping it as its own file (rather than inlined as `const DATA = {...}`) means a browser reload within the same 15-minute window can still get a `304 Not Modified` instead of re-transferring the full payload - and the reload button / pull-to-refresh gesture make that a common case. The one trade-off: the page now needs a `fetch()` at load time, so it must be served over `http(s)://`, not opened directly via `file://` (see [Quick Start](#quick-start) for the `MUF_INLINE_PAYLOAD=1` escape hatch if you want `file://` back).
 
 `muf_data.json` (the full 24h history) and `summary.json` (latest-values-only) are both written alongside the HTML, so you can point other tools at either depending on whether you need the history or just the current numbers.
 
@@ -286,7 +291,7 @@ This was built for one specific use case — mid-Europe HF conditions — and se
 - **POTA and SOTA are hardcoded to Europe + HF only, on different recency windows.** POTA uses a lat/lon bounding box (`lat 34–72, lon -25–40`) and a 15-minute cutoff; SOTA uses a hardcoded list of European `associationCode`s (`SOTA_EU_ASSOCIATIONS`) and a 60-minute cutoff, since summit spots stay "current" longer. Both share the same HF-only band filter (excluding 6m/VHF/UHF). None of this is a parameter yet.
 - **Band-opening thresholds are fixed** to five bands (20m/17m/15m/12m/10m) with hand-picked representative frequencies — see `BANDS` in the template.
 
-None of this is architecturally hard to fix — the obvious next step for a v2 would be pulling these into command-line flags or environment variables (station list, region bounding box, time windows, HF/VHF cutoff). It just hasn't been needed yet for a dashboard built around one specific pair of stations and one specific region.
+None of this is architecturally hard to fix — the obvious next step would be pulling these into command-line flags or environment variables (station list, region bounding box, time windows, HF/VHF cutoff). It just hasn't been needed yet for a dashboard built around one specific pair of stations and one specific region.
 
 ---
 
@@ -299,7 +304,7 @@ docker compose up -d --build
 ```
 
 - `entrypoint.sh` runs `muf.py` once immediately (so the dashboard isn't empty on first start), then starts cron (`muf-cron`, every 15 min) and the file server in one process. Set `MUF_HOME_LOCATOR` in `docker-compose.yml`'s `environment:` to pick hero stations near you instead of the Frankfurt am Main default — cron doesn't inherit the container's environment, so `entrypoint.sh` regenerates `/etc/cron.d/muf-cron` with it baked in at container start, not just the initial fetch.
-- Output goes to `/data` (a named volume), which the file server serves directly — `dashboard.html`, `index.html`, `muf.css`, `mufmuncher-icon.png`, `mufmuncher-llama.png`, `mufmuncher-wave.png`, `muf_payload.json`, `muf_data.json`, and `summary.json` all end up there.
+- Output goes to `/data` (a named volume), which the file server serves directly — `dashboard.html`, `index.html`, `muf.css`, `mufmuncher-icon.png`, `mufmuncher-banner.png`, `mufmuncher-banner-dark.png`, `muf_payload.json`, `muf_data.json`, and `summary.json` all end up there.
 - If you put a reverse proxy in front (nginx, Nginx Proxy Manager, Caddy, ...) for TLS/auth, make sure whatever proxies `/your-path/` also forwards the exact sub-paths unstripped or stripped consistently — `muf.py` writes duplicate copies to a `muf/` subdirectory specifically to survive either proxy behavior without guessing wrong.
 
 ---
@@ -387,7 +392,7 @@ Andreas, [DN9GU](https://www.qrz.com/db/DN9GU), reported that the ionosonde deta
 
 ## Transparency
 
-The idea and concept behind this tool were conceived by **Max Sammet (DA6MAX)**. The code was generated with the assistance of [Claude](https://www.anthropic.com/claude) by Anthropic. The header logo artwork (llama icon and waveform) was generated with [Google Gemini](https://gemini.google.com/).
+The idea and concept behind this tool were conceived by **Max Sammet (DA6MAX)**. The code was generated with the assistance of [Claude](https://www.anthropic.com/claude) by Anthropic. The header banner and app icon artwork (the illustrated llama) was generated with [Google Gemini](https://gemini.google.com/).
 
 
 ## Docker ohne sudo (`maxsammet` in `docker`-Gruppe) — 16.08.2026
