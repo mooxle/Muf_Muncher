@@ -2,6 +2,11 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.6.1] - 2026-09-13
+### Changed
+- New header identity: the line-art llama + separate wordmark/waveform/tagline are replaced by one illustrated banner (full-color llama, "MUF MUNCHER" wordmark, waveform divider and tagline all in a single image). A second variant with just the baked-in tagline text recolored stands in for dark mode - the wordmark/llama colors already read fine on both themes, but the tagline was a fixed dark gray, and inverting the whole image (the old trick for the pure line-art assets) would have wrecked the llama's own gradient shading. The page's `<h1>` text moves to a visually-hidden but screen-reader/SEO-visible heading, since the image now carries the title visually with an equivalent `alt`.
+- The browser tab/home-screen icon (`mufmuncher-icon.png`) is now the same illustrated llama as the new banner, resized from a 1024px master down to 256px so the favicon fetch stays small (the master alone was ~960KB, far too heavy to serve on every page load).
+
 ## [1.6.0] - 2026-09-13
 ### Added
 - Satellite Passes card: the next 3 overflights each of the ISS and SO-50, the two most commonly worked easy LEO satellites for portable ops, computed for the configured locator. Shows AOS/max-elevation/LOS as time + azimuth (+ 16-point compass direction) for antenna aiming, and a green/amber/red dot by max elevation (&ge;30&deg; / 15-30&deg; / &lt;15&deg;, shared threshold for both satellites) - a lower pass means more slant range and a much higher chance the real horizon blocks it outright, same rough-guide spirit as the existing MUF(D) open/marginal/closed chips. Elapsed passes drop off the list live (re-evaluated every clock tick, not just on reload).

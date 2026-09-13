@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 import plotext as plt
 from skyfield.api import EarthSatellite, load, wgs84
 
-VERSION = "1.6.0"
+VERSION = "1.6.1"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
@@ -643,8 +643,8 @@ def render_summary(store, stations, generated_at, latest_version=None):
 
 HTML_TEMPLATE_PATH = os.path.join(SCRIPT_DIR, "dashboard_template.html")
 ICON_PATH = os.path.join(SCRIPT_DIR, "mufmuncher-icon.png")
-LLAMA_PATH = os.path.join(SCRIPT_DIR, "mufmuncher-llama.png")
-WAVE_PATH = os.path.join(SCRIPT_DIR, "mufmuncher-wave.png")
+BANNER_PATH = os.path.join(SCRIPT_DIR, "mufmuncher-banner.png")
+BANNER_DARK_PATH = os.path.join(SCRIPT_DIR, "mufmuncher-banner-dark.png")
 CSS_PATH = os.path.join(SCRIPT_DIR, "muf.css")
 HTML_OUTPUT_PATH = os.path.join(OUTPUT_DIR, "dashboard.html")
 PAYLOAD_FILENAME = "muf_payload.json"
@@ -715,7 +715,7 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
     # bump specifically, so a CSS/asset change (e.g. this one, discovered live
     # on muf.sammet.me) reaches already-visited browsers immediately instead
     # of up to 4h later, without giving up the caching benefit in between.
-    for asset in ("muf.css", "mufmuncher-icon.png", "mufmuncher-llama.png", "mufmuncher-wave.png"):
+    for asset in ("muf.css", "mufmuncher-icon.png", "mufmuncher-banner.png", "mufmuncher-banner-dark.png"):
         html = html.replace(f'"{asset}"', f'"{asset}?v={VERSION}"')
     with open(HTML_OUTPUT_PATH, "w") as f:
         f.write(html)
@@ -725,7 +725,7 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
             f.write(html)
     for out_dir in OUTPUT_DIRS:
         os.makedirs(out_dir, exist_ok=True)
-        for src in (ICON_PATH, LLAMA_PATH, WAVE_PATH, CSS_PATH):
+        for src in (ICON_PATH, BANNER_PATH, BANNER_DARK_PATH, CSS_PATH):
             dst = os.path.join(out_dir, os.path.basename(src))
             # Same file when OUTPUT_DIR defaults to SCRIPT_DIR (no
             # MUF_OUTPUT_DIR set) - nothing to copy in that case.
