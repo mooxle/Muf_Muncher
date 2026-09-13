@@ -21,8 +21,9 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import plotext as plt
+from skyfield.api import EarthSatellite, load, wgs84
 
-VERSION = "1.5.2"
+VERSION = "1.6.0"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
@@ -172,6 +173,26 @@ TICKER_LOOKBACK = timedelta(hours=6)
 
 DATE_FORM = "d/m/Y H:M:S"
 
+# Satellite pass prediction (ISS + SO-50, the two most commonly worked easy
+# LEO birds for portable ops) - NORAD catalog numbers, used both to fetch
+# each satellite's TLE from Celestrak and to label the resulting passes.
+SATELLITES = [("ISS", 25544), ("SO-50", 27607)]
+SAT_PASS_COUNT = 3
+# LEO orbital periods are ~90-100min, so 72h comfortably covers 3 passes even
+# for a satellite that's only briefly/marginally visible from this locator.
+SAT_SEARCH_HOURS = 72
+# TLEs don't need the same 15min cadence as everything else - orbital drift
+# over a few hours is negligible for pass timing at the minute-level accuracy
+# shown here, so this stays cheap on Celestrak instead of hitting it every run.
+TLE_MAX_AGE = timedelta(hours=6)
+CELESTRAK_TLE_URL = "https://celestrak.org/NORAD/elements/gp.php?CATNR={}&FORMAT=TLE"
+# Skyfield's builtin timescale (bundled leap-second/delta-T data, no network
+# call) so pass prediction works offline just like everything else here bar
+# the actual TLE fetch - loaded once at import time since it's the same for
+# every satellite/run.
+SKY_TS = load.timescale(builtin=True)
+HOME_OBSERVER = wgs84.latlon(HOME_LATLON[0], HOME_LATLON[1])
+
 
 def parse_float_or_none(text):
     try:
@@ -253,6 +274,65 @@ def fetch_ticker_value(station):
         if muf is not None:
             latest = {"time": ts.strftime(ISO_FORM), "muf": muf}
     return latest
+
+
+def fetch_tle(norad_id):
+    """Current TLE for one NORAD catalog number, Celestrak's 3-line format
+    (name, line 1, line 2)."""
+    url = CELESTRAK_TLE_URL.format(norad_id)
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=15) as response:
+        raw = response.read().decode("utf-8")
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    if len(lines) < 3:
+        raise ValueError(f"unexpected TLE response for NORAD {norad_id}: {raw!r}")
+    return lines[1], lines[2]
+
+
+def compute_passes(name, line1, line2, observer, start_dt, count=SAT_PASS_COUNT, search_hours=SAT_SEARCH_HOURS):
+    """Next `count` passes above the horizon (0 deg elevation - real horizon
+    obstructions are site-specific and left to the dashboard's own
+    disclaimer), each as AOS/max-elevation/LOS with time + azimuth. Only
+    complete rise-culminate-set triples count; a pass already underway at
+    start_dt, or one still rising when the search window ends, is dropped
+    rather than shown with a missing edge."""
+    sat = EarthSatellite(line1, line2, name, SKY_TS)
+    t0 = SKY_TS.from_datetime(start_dt)
+    t1 = SKY_TS.from_datetime(start_dt + timedelta(hours=search_hours))
+    times, events = sat.find_events(observer, t0, t1, altitude_degrees=0.0)
+
+    passes = []
+    current = {}
+    for ti, event in zip(times, events):
+        if event == 0:
+            current = {"rise": ti}
+        elif event == 1 and "rise" in current:
+            current["culminate"] = ti
+        elif event == 2 and "culminate" in current:
+            current["set"] = ti
+            passes.append(current)
+            current = {}
+            if len(passes) >= count:
+                break
+
+    result = []
+    for p in passes:
+        _, rise_az, _ = (sat - observer).at(p["rise"]).altaz()
+        max_alt, max_az, _ = (sat - observer).at(p["culminate"]).altaz()
+        _, set_az, _ = (sat - observer).at(p["set"]).altaz()
+        result.append(
+            {
+                "aos": p["rise"].utc_strftime(ISO_FORM),
+                "aosAz": round(rise_az.degrees, 1),
+                "maxElTime": p["culminate"].utc_strftime(ISO_FORM),
+                "maxEl": round(max_alt.degrees, 1),
+                "maxElAz": round(max_az.degrees, 1),
+                "los": p["set"].utc_strftime(ISO_FORM),
+                "losAz": round(set_az.degrees, 1),
+                "durationMin": round((p["set"].utc_datetime() - p["rise"].utc_datetime()).total_seconds() / 60),
+            }
+        )
+    return result
 
 
 def fetch_kindex():
@@ -610,6 +690,7 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
         "sfiFetchedAt": store.get("_meta", {}).get("sfiFetchedAt"),
         "xrayFetchedAt": store.get("_meta", {}).get("xrayFetchedAt"),
         "solarWindFetchedAt": store.get("_meta", {}).get("solarWindFetchedAt"),
+        "satellitePasses": store.get("_satPasses", {}),
         "tickerStations": [
             {
                 "code": code,
@@ -756,6 +837,46 @@ for code, name in TICKER_STATIONS.items():
     # transient failure shows the last known reading instead of nothing.
     _time.sleep(0.75)  # spread out GIRO/lgdc.uml.edu requests, avoid tripping its rate limiter
 store["_ticker"] = ticker
+
+tle_cache = store.get("_tle", {})
+for sat_name, norad_id in SATELLITES:
+    key = str(norad_id)
+    cached = tle_cache.get(key)
+    needs_fetch = True
+    if cached:
+        try:
+            fetched_at = datetime.strptime(cached["fetchedAt"], ISO_FORM).replace(tzinfo=timezone.utc)
+            needs_fetch = now - fetched_at > TLE_MAX_AGE
+        except (KeyError, ValueError):
+            needs_fetch = True
+    if needs_fetch:
+        print(f"Fetching TLE for {sat_name} ({norad_id})...")
+        try:
+            line1, line2 = fetch_tle(norad_id)
+            tle_cache[key] = {"line1": line1, "line2": line2, "fetchedAt": now.strftime(ISO_FORM)}
+        except (urllib.error.URLError, TimeoutError, ValueError) as e:
+            print(f"Failed to fetch TLE for {sat_name} ({norad_id}): {e}")
+            # keep whatever TLE (if any) is already cached - a few hours'
+            # orbital drift on top of an already-stale TLE barely moves the
+            # pass predictions, so this degrades gracefully rather than
+            # dropping the tile.
+store["_tle"] = tle_cache
+
+sat_passes = store.get("_satPasses", {})
+for sat_name, norad_id in SATELLITES:
+    cached = tle_cache.get(str(norad_id))
+    if not cached:
+        continue
+    print(f"Computing {sat_name} passes over {HOME_LOCATOR or FRANKFURT_LOCATOR}...")
+    try:
+        sat_passes[sat_name] = compute_passes(sat_name, cached["line1"], cached["line2"], HOME_OBSERVER, now)
+    except Exception as e:
+        # Broad catch, deliberately: a malformed/decayed TLE can surface as
+        # several different error types from sgp4/skyfield internals, none
+        # of which should be able to take down the whole run over an
+        # optional tile - keep whatever passes were last computed instead.
+        print(f"Failed to compute passes for {sat_name}: {e}")
+store["_satPasses"] = sat_passes
 
 print("Checking latest GitHub release...")
 try:

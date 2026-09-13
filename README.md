@@ -91,6 +91,7 @@ The dashboard is a static snapshot regenerated on every run — schedule it with
 | **Space Weather** | SFI, Kp (+ G-scale), GOES X-ray flux (+ flare class and R-scale), ACE solar wind speed, and daily sunspot number (SSN) — each with its own tile, sparkline, and a color rating (good/marginal/critical) for HF conditions |
 | **Header** | Live UTC + local clock, your active locator ("Your locator: JO40jg", or "Frankfurt am Main (JO40ic) · default" if unset — highlighted if it's outside the ten stations' coverage), a manual dark/light toggle (persisted across reloads), and the running version linked to source — which lights up with an "update available" badge when `muf.py` finds a newer GitHub release during its cron run |
 | **Data freshness** | Each major section has its own prominent "X Data updated" line (dot + timestamp), not just one page-wide stat: "GIRO Data updated" above the hero row, "POTA/SOTA Data updated" above the activator list, "Space Weather Data updated" above the indices. Each reflects that source's actual latest successful reading, not just when `muf.py` last ran — color and wording scale to its own update cadence (GIRO/POTA/NOAA ~15min, SOTA ~60min), calling out "likely a data issue upstream" once ~2 cycles are missed, and adding the date once the last reading isn't from today. Independent per section, so one source's outage doesn't make the others look broken too |
+| **Satellite Passes** | Next 3 overflights each of the ISS and SO-50 (the most commonly worked easy LEO satellites for portable ops) over your configured locator — AOS/max-elevation/LOS times and azimuths for antenna aiming, plus a green/amber/red dot by max elevation as a rough go/skip guide. Elapsed passes drop off the list live, without waiting for a reload |
 | **Home screen ready** | A reload button and a manual pull-to-refresh gesture, since iOS strips native pull-to-refresh once the page is added to the home screen as a standalone web app |
 
 ![MUF Muncher — MUF(D), foF2 and foEs charts with hover crosshair and legend toggle](MUF_Screener2.png)
@@ -118,7 +119,7 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "MufMuncher/1.5.2 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/1.6.0 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \
@@ -312,6 +313,7 @@ docker compose up -d --build
 | [POTA (Parks on the Air)](https://parksontheair.com/) | Live activator spots | No formal API terms of service found; the public API is served with permissive CORS (`Access-Control-Allow-Origin: *`), suggesting open third-party use is intended, but this isn't a substitute for an actual published policy |
 | [SOTA (Summits on the Air)](https://www.sota.org.uk/) | Live activator spots, association list | No formal API terms of service found for `api-db2.sota.org.uk` specifically; sota.org.uk's general site terms apply to the website itself |
 | [prop.kc2g.com](https://prop.kc2g.com) (KC2G) | Linked out to, not embedded/scraped | Not redistributed by this project — see their site directly for terms |
+| [CelesTrak](https://celestrak.org/) | ISS and SO-50 TLE (orbital elements) for pass prediction | Public domain / freely redistributable per [CelesTrak's FAQ](https://celestrak.org/NORAD/documentation/gp-data-formats.php); attribution appreciated |
 
 ### Required attribution for GIRO/DIDBase data
 

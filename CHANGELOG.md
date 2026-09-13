@@ -2,6 +2,11 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [1.6.0] - 2026-09-13
+### Added
+- Satellite Passes card: the next 3 overflights each of the ISS and SO-50, the two most commonly worked easy LEO satellites for portable ops, computed for the configured locator. Shows AOS/max-elevation/LOS as time + azimuth (+ 16-point compass direction) for antenna aiming, and a green/amber/red dot by max elevation (&ge;30&deg; / 15-30&deg; / &lt;15&deg;, shared threshold for both satellites) - a lower pass means more slant range and a much higher chance the real horizon blocks it outright, same rough-guide spirit as the existing MUF(D) open/marginal/closed chips. Elapsed passes drop off the list live (re-evaluated every clock tick, not just on reload).
+- New dependency: `skyfield` (TLE propagation + rise/culminate/set event finding), rather than hand-rolling the ECI-to-topocentric coordinate math on top of raw `sgp4` - a subtle bug in that transform would silently point a real antenna at the wrong patch of sky, so this leans on a maintained, widely-used library instead. TLEs come from Celestrak, refreshed at most every 6h (cached in the store) since orbital drift over a few hours doesn't move pass timing at the minute-level precision shown here; pass prediction itself runs fully offline (Skyfield's bundled leap-second/delta-T data, no extra network call beyond the TLE fetch).
+
 ## [1.5.2] - 2026-09-13
 ### Fixed
 - The "GIRO Data updated" freshness dot could show green/"just now" while the hero stations had zero data at all: it computed the last real reading only from the two hero stations' records, and once the ongoing GIRO outage passed the 24h retention window, `merge_and_prune` legitimately pruned their entire history to nothing (`stationTimes.length === 0`), which fell back to `generatedAt` (render time, i.e. "now") - the exact "just re-rendered on schedule, but the underlying data is stale" bug v1.4.4 already fixed for the case where records still existed. Now also considers the ticker's 8 other GIRO stations (never pruned by age), so the real last-known reading from ~26h ago surfaces correctly as critically stale instead of the fallback pretending it's fresh; falls back to an explicit "no data received yet" (not "just now") only if literally no GIRO station - hero or ticker - has ever returned a reading.

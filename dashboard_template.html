@@ -125,8 +125,24 @@
     <div class="disclaimer">SFI &amp; Kp: NOAA SWPC (services.swpc.noaa.gov), global (not station-specific). X-ray flux: NOAA SWPC / GOES primary X-ray sensor. Solar wind speed: NOAA SWPC / ACE SWEPAM. Sunspot number: NOAA/SESC daily solar data, once per day &mdash; kept for 30 days (everything else on this page: 24h).</div>
   </div>
 
+  <div class="section-title" id="satellites">
+    <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><rect x="8.3" y="8.3" width="3.4" height="3.4" transform="rotate(45 10 10)" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="12.4" y1="7.6" x2="16" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="7.6" y1="12.4" x2="4" y2="16" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M13.5 3 L17 6.5 M3 13.5 L6.5 17" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Satellite Passes
+  </div>
+  <div class="chart-card">
+    <div class="chead"><h2>Next ISS &amp; SO-50 Overflights</h2></div>
+    <div id="satPassList"></div>
+    <div class="band-legend-shared">
+      <span class="item"><span class="sw" style="background:var(--good)"></span>&ge;30&deg; max el.</span>
+      <span class="item"><span class="sw" style="background:var(--warning)"></span>15-30&deg;</span>
+      <span class="item"><span class="sw" style="background:var(--critical)"></span>&lt;15&deg;</span>
+      <span>&mdash; rough guide by max elevation only, real horizon obstructions vary by site</span>
+    </div>
+    <div class="disclaimer">TLE: celestrak.org &middot; times UTC &middot; azimuth in degrees from true north &middot; elapsed passes drop off this list automatically, new ones appear on the next dashboard reload.</div>
+  </div>
+
   <div class="foot">
-    <span>Source: Lowell GIRO Data Center &middot; DIDBase (CC-BY-NC-SA 4.0) &middot; giro.uml.edu &middot; NOAA SWPC &middot; pota.app &middot; sota.org.uk</span>
+    <span>Source: Lowell GIRO Data Center &middot; DIDBase (CC-BY-NC-SA 4.0) &middot; giro.uml.edu &middot; NOAA SWPC &middot; pota.app &middot; sota.org.uk &middot; celestrak.org</span>
     <span id="updatedFoot"></span>
   </div>
   <div class="credit">
@@ -463,6 +479,32 @@ function updateSwFreshness() {
   renderFreshnessLine(swDotEl, swUpdatedEl, swAgeEl, worst.ms, worst.cadenceMin);
 }
 
+// Satellite pass data/elements set up here (ahead of updateClock's first
+// synchronous call below) rather than down by the rest of the satellite
+// rendering code near the bottom of the file - updateClock calls
+// renderSatellitePasses() every tick starting immediately, and these are
+// `const`s, so referencing them before this point would throw.
+const SAT_LIST = [
+  { key: 'ISS', label: 'ISS' },
+  { key: 'SO-50', label: 'SO-50' },
+];
+const satPassListEl = document.getElementById('satPassList');
+const satellitePasses = DATA.satellitePasses || {};
+const COMPASS_POINTS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+function azToCompass(deg) {
+  return COMPASS_POINTS[Math.round(deg / 22.5) % 16];
+}
+
+// Same three-tier idea as the MUF(D) band chips above, but by max elevation:
+// a lower pass means more atmosphere/slant range (weaker signal) and a much
+// higher chance the real horizon (buildings, trees) blocks it outright,
+// regardless of what's geometrically visible from a flat-earth model.
+function satElevationTier(elDeg) {
+  if (elDeg >= 30) return 'var(--good)';
+  if (elDeg >= 15) return 'var(--warning)';
+  return 'var(--critical)';
+}
+
 // A blinking colon signals "this is live" without extra text; built as HTML
 // (not textContent) purely to wrap the colons - h/m/s here are always our own
 // generated 2-digit numeric strings, never external/untrusted data.
@@ -498,6 +540,7 @@ function updateClock() {
   updateDataFreshness();
   updateActivatorFreshness();
   updateSwFreshness();
+  renderSatellitePasses();
 }
 updateClock();
 setInterval(updateClock, 1000);
@@ -1219,6 +1262,47 @@ function kpColor(kp) {
   if (kp >= 4) return 'var(--warning)';
   return 'var(--good)';
 }
+
+// ---------------------------------------------------------------- Satellite passes
+function buildSatRow(pass) {
+  const row = document.createElement('div');
+  row.className = 'sat-row';
+  // Round once and reuse - classifying the unrounded value but displaying
+  // the rounded one could show e.g. a red dot next to a displayed "15°",
+  // which reads as a contradiction against the legend's own 15° cutoff.
+  const maxElRounded = Math.round(pass.maxEl);
+  row.innerHTML = `
+    <span class="dot" style="background:${satElevationTier(maxElRounded)}"></span>
+    <span class="sat-time">AOS <b>${formatUpdatedTime(new Date(pass.aos).getTime())}</b> <span class="sat-az">${Math.round(pass.aosAz)}&deg; ${azToCompass(pass.aosAz)}</span></span>
+    <span class="sat-arrow">&rarr;</span>
+    <span class="sat-time">MAX <b>${maxElRounded}&deg;</b> <span class="sat-az">${Math.round(pass.maxElAz)}&deg; ${azToCompass(pass.maxElAz)}</span></span>
+    <span class="sat-arrow">&rarr;</span>
+    <span class="sat-time">LOS <b>${formatUpdatedTime(new Date(pass.los).getTime())}</b> <span class="sat-az">${Math.round(pass.losAz)}&deg; ${azToCompass(pass.losAz)}</span></span>
+    <span class="sat-dur">${pass.durationMin}m</span>
+  `;
+  return row;
+}
+
+// Re-run on every clock tick (like the freshness lines above) rather than
+// once at load: a pass whose LOS has already ticked past "now" is over, and
+// should disappear on its own without waiting for the next dashboard
+// reload/cron cycle to re-fetch a payload that no longer lists it.
+function renderSatellitePasses() {
+  const nowMs = Date.now();
+  satPassListEl.innerHTML = '';
+  for (const { key, label } of SAT_LIST) {
+    const upcoming = (satellitePasses[key] || []).filter(p => new Date(p.los).getTime() > nowMs);
+    const group = document.createElement('div');
+    group.className = 'sat-group';
+    const label_ = `<div class="sat-group-label">${label}</div>`;
+    group.innerHTML = upcoming.length
+      ? label_
+      : `${label_}<div class="pota-empty">No upcoming pass data - refreshes on the next dashboard cycle.</div>`;
+    for (const p of upcoming) group.appendChild(buildSatRow(p));
+    satPassListEl.appendChild(group);
+  }
+}
+renderSatellitePasses();
 })();
 </script>
 </body>

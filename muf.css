@@ -353,6 +353,19 @@
     .pota-meta { flex: 1 1 100%; text-align: left; padding-left: 42px; }
   }
 
+  /* Satellite passes */
+  .sat-group { margin-bottom: 10px; }
+  .sat-group:last-child { margin-bottom: 0; }
+  .sat-group-label { font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; font-weight: 650; font-size: 10px; padding: 4px 0; }
+  .sat-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .sat-row:last-child { border-bottom: none; }
+  .sat-row .dot { flex: none; }
+  .sat-time { color: var(--text-secondary); }
+  .sat-time b { color: var(--text-primary); font-weight: 650; }
+  .sat-az { color: var(--text-muted); font-size: 11px; }
+  .sat-arrow { color: var(--text-muted); }
+  .sat-dur { margin-left: auto; color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+
   /* Filters: click a band/entity to narrow the list to just that selection
      (multiple selections within a group OR together); empty selection shows
      everything. Inclusion-style, unlike the exclusion-style chart legends
