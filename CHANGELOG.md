@@ -2,6 +2,10 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [2.1.3] - 2026-10-21
+### Removed
+- SOTA spots, reported in [issue #2](https://github.com/mooxle/Muf_Muncher/issues/2). The endpoint `muf.py` polled (`api-db2.sota.org.uk/api/spots/-1/all`) has been deprecated and now returns a single placeholder "spot" (association `DEPRECATED`) carrying a notice instead of real data. `muf.py` never checked for that: the placeholder was silently filtered out as non-European, the fetch still counted as a success, and the dashboard showed a healthy "POTA/SOTA Data updated" line over a SOTA list that had quietly been empty. More importantly, SOTA's [API terms of service](https://api-db2.sota.org.uk/docs/) don't allow AI-generated software to connect without prior approval, require a registered point of contact, and ask people not to build yet another aggregating dashboard on top of it - and this project is openly built with AI assistance. So the SOTA fetch is gone entirely rather than pointed at a newer endpoint. Activator Activity is POTA-only for now, with a plain link out to SOTAwatch for SOTA spots instead; the README's SOTA API section and its "no formal terms of service found" note (wrong, and now outdated) are removed too.
+
 ## [2.1.2] - 2026-09-13
 ### Fixed
 - The Space Weather / Satellite Passes tile pair fell back to a narrow stacked column instead of sitting side by side once the viewport was wide enough for the station cards to grow past their base width - a wrapping flex container's shrink-to-fit width can collapse to its largest single child instead of the sum of all of them when left as `flex-basis: auto`. Pinned to `flex: 0 0 346px` (168+168+gap) so it reliably reserves the right width regardless of how much room the station cards next to it end up with.

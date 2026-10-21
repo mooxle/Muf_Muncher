@@ -90,11 +90,11 @@ The dashboard is a static snapshot regenerated on every run — schedule it with
 | **Quick nav** | A minimal row of jump links (Activator Activity / Ionosonde Detail / Space Weather / Satellite Passes) between the freshness line and the hero row, for getting to a section without scrolling past everything above it |
 | **European Ticker** | Current MUF(D) for 8 more GIRO ionosonde stations across Europe (Spain, UK, Italy ×2, Greece, Czechia, Hungary, Norway) as compact pill chips — coverage without the chart overhead; hover a chip for its distance from your locator |
 | **Global MUF Map** | One-click link out to [prop.kc2g.com](https://prop.kc2g.com)'s live, globally-interpolated MUF map |
-| **Activator Activity** | Live POTA *and* SOTA activator spots across Europe on HF bands, merged into one time-sorted list and band-colored using the *same* MUF-derived open/marginal/closed logic as the hero row. Click a network, mode (SSB/CW/Digimode), band, or country chip to filter (multi-select), list caps at 7 rows with a "Show all" expander |
+| **Activator Activity** | Live POTA activator spots across Europe on HF bands (plus a link out to [SOTAwatch](https://sotawatch.sota.org.uk/) for SOTA), time-sorted and band-colored using the *same* MUF-derived open/marginal/closed logic as the hero row. Click a mode (SSB/CW/Digimode), band, or country chip to filter (multi-select), list caps at 7 rows with a "Show all" expander |
 | **Ionosonde detail** | foF2, MUF(D) and foEs charts for both hero stations, last 24h, with hover tooltips and a per-station legend toggle |
 | **Space Weather** | SFI, Kp (+ G-scale), GOES X-ray flux (+ flare class and R-scale), ACE solar wind speed, and daily sunspot number (SSN) — each with its own tile, sparkline, and a color rating (good/marginal/critical) for HF conditions |
 | **Header** | Live UTC + local clock, your active locator ("Your locator: JO40jg", or "Frankfurt am Main (JO40ic) · default" if unset — highlighted if it's outside the ten stations' coverage), a manual dark/light toggle (persisted across reloads), and the running version linked to source — which lights up with an "update available" badge when `muf.py` finds a newer GitHub release during its cron run |
-| **Data freshness** | Each major section has its own prominent "X Data updated" line (dot + timestamp), not just one page-wide stat: "GIRO Data updated" above the hero row, "POTA/SOTA Data updated" above the activator list, "Space Weather Data updated" above the indices. Each reflects that source's actual latest successful reading, not just when `muf.py` last ran — color and wording scale to its own update cadence (GIRO/POTA/NOAA ~15min, SOTA ~60min), calling out "likely a data issue upstream" once ~2 cycles are missed, and adding the date once the last reading isn't from today. Independent per section, so one source's outage doesn't make the others look broken too |
+| **Data freshness** | Each major section has its own prominent "X Data updated" line (dot + timestamp), not just one page-wide stat: "GIRO Data updated" above the hero row, "POTA Data updated" above the activator list, "Space Weather Data updated" above the indices. Each reflects that source's actual latest successful reading, not just when `muf.py` last ran — color and wording scale to its own update cadence (~15min for all of them today), calling out "likely a data issue upstream" once ~2 cycles are missed, and adding the date once the last reading isn't from today. Independent per section, so one source's outage doesn't make the others look broken too |
 | **Satellite Passes** | Next 3 overflights each of the ISS and SO-50 (the most commonly worked easy LEO satellites for portable ops) over your configured locator — AOS/max-elevation/LOS times and azimuths for antenna aiming, plus a green/amber/red signal-bar icon by max elevation as a rough go/skip guide (bar count doubles up with color, so it still reads for colorblind users). Elapsed passes drop off the list live, without waiting for a reload |
 | **Home screen ready** | A reload button and a manual pull-to-refresh gesture, since iOS strips native pull-to-refresh once the page is added to the home screen as a standalone web app |
 
@@ -125,7 +125,7 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "MufMuncher/2.1.2 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/2.1.3 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \
@@ -224,29 +224,6 @@ GET https://api.pota.app/spot/activator
 
 This one returns *every* current spot worldwide, on every band and mode — `muf.py` does all the filtering (see [Current Limitations](#current-limitations-hardcoded-for-now) below).
 
-### 4. Live SOTA activator spots
-
-```
-GET https://api-db2.sota.org.uk/api/spots/-1/all
-```
-
-```json
-{
-  "id": 358898,
-  "timeStamp": "2026-07-28T18:17:48",
-  "callsign": "DA1HM",
-  "associationCode": "OE",
-  "summitCode": "SB-289",
-  "activatorCallsign": "OE/DA1HM/P",
-  "activatorName": "Johann",
-  "frequency": "14.31",
-  "mode": "SSB",
-  "summitDetails": "Heuberg, 901m, 2 points"
-}
-```
-
-Also every current spot worldwide, all bands - `muf.py` filters to European `associationCode`s (a hardcoded list built from `GET https://api-db2.sota.org.uk/api/associations`, which tags each association with a `continent` field) and HF only. SOTA and POTA spots are merged into one list, sorted by time, with a `network` field ("POTA"/"SOTA") on each entry so the dashboard can tag, filter, and link each row appropriately (POTA links to pota.app, SOTA to [sotl.as](https://sotl.as)).
-
 ---
 
 ## How It Works
@@ -261,8 +238,6 @@ muf.py (runs every 15 min via cron)
   ├─ fetch_solar_wind()     → NOAA / ACE SWEPAM solar wind speed, hourly
   ├─ fetch_ssn()             → NOAA/SESC sunspot number, daily, kept 30 days
   ├─ fetch_pota_spots()      → POTA spots, filtered (Europe / HF / last 15min)
-  ├─ fetch_sota_spots()       → SOTA spots, filtered (Europe / HF / last 60min),
-  │                            merged with POTA spots into one time-sorted list
   │
   ├─ merge_and_prune()     → dedupe by timestamp against muf_data.json,
   │                           drop anything older than 24h
@@ -289,7 +264,7 @@ This was built for one specific use case — mid-Europe HF conditions — and se
 
 - **24h window, almost always.** `muf.py` requests the last 24 hours from GIRO and NOAA on every run, merges it with whatever's already in `muf_data.json`, and **permanently discards anything older than 24h** - with one exception: sunspot number (SSN) is a once-daily reading, so it's kept for 30 days instead (a 24h window would only ever hold a single point, no trend to show). There's no way to keep a longer history for the other metrics, or look further back, without changing the code.
 - **Hero stations are the two nearest to a configurable home locator, out of ten curated European GIRO stations — not any ten, just these ten.** Set `MUF_HOME_LOCATOR` to your Maidenhead grid square (4 or 6 characters, e.g. `JO40jg`); `muf.py` picks the nearest two by great-circle distance for the hero tiles (full 24h history/charts) and puts the other eight in the ticker (latest MUF(D) only). Defaults to Frankfurt am Main if unset, which resolves to Dourbes + Pruhonice — not Dourbes + Juliusruh, since Pruhonice is genuinely the closer of the two. Adding an eleventh station to the pool still means editing `STATION_INFO` in `muf.py`, not a config file.
-- **POTA and SOTA are hardcoded to Europe + HF only, on different recency windows.** POTA uses a lat/lon bounding box (`lat 34–72, lon -25–40`) and a 15-minute cutoff; SOTA uses a hardcoded list of European `associationCode`s (`SOTA_EU_ASSOCIATIONS`) and a 60-minute cutoff, since summit spots stay "current" longer. Both share the same HF-only band filter (excluding 6m/VHF/UHF). None of this is a parameter yet.
+- **POTA is hardcoded to Europe + HF only.** A lat/lon bounding box (`lat 34–72, lon -25–40`), a 15-minute cutoff, and an HF-only band filter (excluding 6m/VHF/UHF). None of this is a parameter yet.
 - **Band-opening thresholds are fixed** to five bands (20m/17m/15m/12m/10m) with hand-picked representative frequencies — see `BANDS` in the template.
 
 None of this is architecturally hard to fix — the obvious next step would be pulling these into command-line flags or environment variables (station list, region bounding box, time windows, HF/VHF cutoff). It just hasn't been needed yet for a dashboard built around one specific pair of stations and one specific region.
@@ -317,7 +292,6 @@ docker compose up -d --build
 | [Lowell GIRO Data Center (LGDC) / DIDBase](https://giro.uml.edu/didbase/) | Ionosonde-derived foF2, MUF(D), foEs | [CC BY-NC-SA 4.0](https://giro.uml.edu/didbase/RulesOfTheRoad.html) — **non-commercial only**, attribution required |
 | [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov/) | Solar flux index (SFI), planetary K-index, GOES X-ray flux, ACE solar wind speed, daily sunspot number | U.S. government work, public domain — attribution appreciated, no endorsement implied |
 | [POTA (Parks on the Air)](https://parksontheair.com/) | Live activator spots | No formal API terms of service found; the public API is served with permissive CORS (`Access-Control-Allow-Origin: *`), suggesting open third-party use is intended, but this isn't a substitute for an actual published policy |
-| [SOTA (Summits on the Air)](https://www.sota.org.uk/) | Live activator spots, association list | No formal API terms of service found for `api-db2.sota.org.uk` specifically; sota.org.uk's general site terms apply to the website itself |
 | [prop.kc2g.com](https://prop.kc2g.com) (KC2G) | Linked out to, not embedded/scraped | Not redistributed by this project — see their site directly for terms |
 | [CelesTrak](https://celestrak.org/) | ISS and SO-50 TLE (orbital elements) for pass prediction | Public domain / freely redistributable per [CelesTrak's FAQ](https://celestrak.org/NORAD/documentation/gp-data-formats.php); attribution appreciated |
 
@@ -342,7 +316,7 @@ Intended for:
 Not intended for:
 - Commercial use of the GIRO/DIDBase data specifically (explicitly excluded by its CC BY-NC-SA license)
 - Bulk/automated scraping beyond the built-in 15-minute cadence
-- Presenting this as an official NOAA, LGDC/GIRO, POTA, or SOTA product — it isn't, and no endorsement by any of them is implied
+- Presenting this as an official NOAA, LGDC/GIRO, or POTA product — it isn't, and no endorsement by any of them is implied
 
 ---
 
@@ -388,6 +362,8 @@ Ivar Nygård, [LB8VA](https://www.qrz.com/db/LB8VA), reported that `muf.py` cras
 Andreas, [DN9GU](https://www.qrz.com/db/DN9GU), reported that the ionosonde detail charts' x-axis could show a misleading hour at the right edge — fixed in v1.4.2.
 
 [Sn0rrii](https://github.com/netscout2001), in [this project's first GitHub issue](https://github.com/mooxle/Muf_Muncher/issues/1), reported that `docker-compose.yml` hardcoded `MUF_HOME_LOCATOR` as a literal empty value instead of `${VAR}` interpolation, silently ignoring it when set via a `.env` file or a stack manager's environment panel — fixed in v1.4.3.
+
+[vk3arr](https://github.com/vk3arr), in [issue #2](https://github.com/mooxle/Muf_Muncher/issues/2), pointed out that the SOTA endpoint `muf.py` polled had been deprecated without the app noticing, and that this project didn't meet the [SOTA API terms of service](https://api-db2.sota.org.uk/docs/) — SOTA spots were removed (replaced by a link to SOTAwatch) in v2.1.3.
 
 ---
 

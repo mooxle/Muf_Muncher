@@ -105,13 +105,14 @@
   </div>
   <div class="chart-card">
     <div class="chead">
-      <h2>Live POTA &amp; SOTA Activators &mdash; Europe, HF</h2>
+      <h2>Live POTA Activators &mdash; Europe, HF</h2>
+      <a class="chead-link" href="https://sotawatch.sota.org.uk/en/" target="_blank" rel="noopener noreferrer">SOTA spots on SOTAwatch <span class="ext-arrow">&#8599;</span></a>
     </div>
-    <div class="card-freshness"><span class="dot" id="activatorDot"></span>POTA/SOTA Data updated <span id="activatorUpdated">--:--:--</span> UTC (<span id="activatorAge">-</span>)</div>
+    <div class="card-freshness"><span class="dot" id="activatorDot"></span>POTA Data updated <span id="activatorUpdated">--:--:--</span> UTC (<span id="activatorAge">-</span>)</div>
     <div class="pota-filters" id="potaFilters"></div>
     <div id="potaList"></div>
     <button class="pota-showmore" id="potaShowMoreBtn" type="button"></button>
-    <div class="disclaimer" id="activatorDisclaimer">Source: pota.app (last 15 min) &middot; api-db2.sota.org.uk (last 60 min) &middot; refreshed each dashboard cycle &middot; band colors cross-reference the Band Opening estimate above.</div>
+    <div class="disclaimer" id="activatorDisclaimer">Source: pota.app (last 15 min) &middot; refreshed each dashboard cycle &middot; band colors cross-reference the Band Opening estimate above.</div>
   </div>
 
   <div class="section-title" id="ionosonde-detail">
@@ -149,14 +150,14 @@
   </div>
 
   <div class="foot">
-    <span>Source: Lowell GIRO Data Center &middot; DIDBase (CC-BY-NC-SA 4.0) &middot; giro.uml.edu &middot; NOAA SWPC &middot; pota.app &middot; sota.org.uk &middot; celestrak.org</span>
+    <span>Source: Lowell GIRO Data Center &middot; DIDBase (CC-BY-NC-SA 4.0) &middot; giro.uml.edu &middot; NOAA SWPC &middot; pota.app &middot; celestrak.org</span>
     <span id="updatedFoot"></span>
   </div>
   <div class="credit">
     Ionosonde data: Global Ionospheric Radio Observatory (GIRO). Reinisch, B. W., and I. A. Galkin (2011), Global ionospheric radio observatory (GIRO), <em>Earth, Planets and Space</em>, 63, 377&ndash;381, doi:10.5047/eps.2011.03.001. See <a href="http://spase.info/SMWG/Observatory/GIRO" target="_blank" rel="noopener">spase.info/SMWG/Observatory/GIRO</a>.
   </div>
   <div class="credit">
-    This is a private, non-commercial project. It is not an official NOAA, LGDC/GIRO, POTA, or SOTA product, and no endorsement by any of them is implied.
+    This is a private, non-commercial project. It is not an official NOAA, LGDC/GIRO, or POTA product, and no endorsement by any of them is implied.
   </div>
   <div class="credit">Built by Max Sammet, <a href="https://www.qrz.com/db/DA6MAX" target="_blank" rel="noopener">DA6MAX</a> &middot; built with assistance from <a href="https://www.anthropic.com/claude" target="_blank" rel="noopener">Claude</a> (Anthropic)</div>
   <div class="credit"><span id="versionFoot"></span> &middot; MIT licensed &middot; <a href="https://github.com/mooxle/Muf_Muncher" target="_blank" rel="noopener">Source on GitHub</a></div>
@@ -389,9 +390,8 @@ const stationTimes = stations.flatMap(s => s.records.map(r => new Date(r.time).g
 const latestDataMs = stationTimes.length ? Math.max(...stationTimes) : null;
 
 // How stale is a source's data, relative to its own update cadence rather
-// than one fixed number - GIRO/POTA refresh every ~15min, SOTA only every
-// ~60min, so "30min old" is a missed cycle for one and unremarkable for the
-// other. "Broken" (~2 missed cycles) gets called out in text too, not just
+// than one fixed number, so a slower-updating source doesn't read as broken
+// just because it's on a longer cycle. "Broken" (~2 missed cycles) gets called out in text too, not just
 // color, since color alone is easy to skim past on a quick glance.
 function freshnessInfo(lastMs, cadenceMin) {
   if (lastMs == null) return { noData: true, color: 'var(--critical)', isBroken: true };
@@ -427,8 +427,8 @@ function renderFreshnessLine(dotEl, updatedEl, ageEl, ms, cadenceMin) {
   dotEl.style.background = color;
 }
 
-// Some stat lines represent more than one independent source (POTA+SOTA,
-// or the four NOAA feeds behind Space Weather). Each has its own cadence,
+// Some stat lines represent more than one independent source (the four
+// NOAA feeds behind Space Weather). Each has its own cadence,
 // so comparing raw ages would always make the slowest-cadence source look
 // the most "overdue" even when perfectly healthy - comparing age relative
 // to cadence picks whichever source is actually the most behind on its own
@@ -445,24 +445,19 @@ function updateDataFreshness() {
   renderFreshnessLine(dataDotEl, dataUpdatedEl, dataAgeEl, latestDataMs, 15);
 }
 
-// POTA and SOTA are independent sources with their own fetch success/failure
-// - showing their own "last updated" here (rather than only the GIRO-derived
-// stat above) means a POTA/SOTA-side hiccup is visible on its own, and a
+// POTA is an independent source with its own fetch success/failure - showing
+// its own "last updated" here (rather than only the GIRO-derived stat above)
+// means a POTA-side hiccup is visible on its own, and a
 // GIRO-side one (like 2026-09-12) doesn't make this list look stale too when
 // it isn't.
 const activatorDotEl = document.getElementById('activatorDot');
 const activatorUpdatedEl = document.getElementById('activatorUpdated');
 const activatorAgeEl = document.getElementById('activatorAge');
 const potaFetchedAtMs = DATA.potaFetchedAt ? new Date(DATA.potaFetchedAt).getTime() : null;
-const sotaFetchedAtMs = DATA.sotaFetchedAt ? new Date(DATA.sotaFetchedAt).getTime() : null;
 
 function updateActivatorFreshness() {
-  const worst = worstSource([
-    { ms: potaFetchedAtMs, cadenceMin: 15 },
-    { ms: sotaFetchedAtMs, cadenceMin: 60 },
-  ]);
-  if (!worst) return;
-  renderFreshnessLine(activatorDotEl, activatorUpdatedEl, activatorAgeEl, worst.ms, worst.cadenceMin);
+  if (potaFetchedAtMs == null) return;
+  renderFreshnessLine(activatorDotEl, activatorUpdatedEl, activatorAgeEl, potaFetchedAtMs, 15);
 }
 
 // Same idea for the four NOAA feeds behind Space Weather (SSN excluded - see
@@ -1142,7 +1137,7 @@ const potaSelectedBands = new Set();
 const potaSelectedEntities = new Set();
 let potaExpanded = false;
 
-// POTA/SOTA both report a free-text mode string (observed: SSB, CW, FM, FT8,
+// POTA reports a free-text mode string (observed: SSB, CW, FM, FT8,
 // FT4, DATA, and blank/unknown) - bucketed down to the three groups hunters
 // actually filter by. FM/AM and blank aren't phone-SSB, CW, or digital, so
 // they fall into no bucket (excluded once any mode filter is active, same as
@@ -1156,11 +1151,9 @@ function spotModeBucket(spot) {
   return 'Digimode'; // FT8/FT4/RTTY/PSK/JS8/DATA/etc.
 }
 
-// POTA references look like "DE-0601" (entity before the dash); SOTA spots
-// already carry associationCode separately (references look like
-// "OE/SB-289", which isn't a plain prefix split).
+// POTA references look like "DE-0601" (entity before the dash).
 function potaEntity(spot) {
-  return spot.network === 'SOTA' ? (spot.associationCode || '?') : (spot.reference || '').split('-')[0] || '?';
+  return (spot.reference || '').split('-')[0] || '?';
 }
 
 // Full HF band order (spots can be on any of these, unlike the BANDS
@@ -1169,7 +1162,6 @@ const POTA_BAND_ORDER = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m'
 
 function buildPotaRow(spot) {
   const { bg, fg } = potaBandColor(spot.band);
-  const isSota = spot.network === 'SOTA';
   // Only 20-10m get a color: MUF(D) is an upper bound (is F2 skip possible
   // at all), not a lower bound - it says nothing about D-layer absorption
   // or the LUF, which are what actually govern whether 40m/80m/etc. are
@@ -1185,9 +1177,9 @@ function buildPotaRow(spot) {
     <span class="band-chip pota-band" style="background:${bg};color:${fg}" title="${bandTitle}">${spot.band}</span>
     <span class="network-tag ${spot.network.toLowerCase()}">${spot.network}</span>
     <span class="pota-call-wrap">
-      ${isSota ? '' : `<a class="pota-profile-icon" target="_blank" rel="noopener noreferrer" title="POTA.app profile">
+      <a class="pota-profile-icon" target="_blank" rel="noopener noreferrer" title="POTA.app profile">
         <svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"><path d="M10 1.2 L14.6 9 H11.8 L15.6 15 H4.4 L8.2 9 H5.4 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><line x1="10" y1="15" x2="10" y2="18.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-      </a>`}
+      </a>
       <a class="pota-call" target="_blank" rel="noopener noreferrer" title="QRZ lookup"></a>
     </span>
     <span class="pota-park"><a class="ref" target="_blank" rel="noopener noreferrer"></a> <span class="name"></span></span>
@@ -1195,18 +1187,14 @@ function buildPotaRow(spot) {
   `;
   const call = spot.activator || '?';
   const baseCall = qrzBaseCall(call);
-  if (!isSota) {
-    row.querySelector('.pota-profile-icon').href = 'https://pota.app/#/profile/' + encodeURIComponent(baseCall);
-  }
+  row.querySelector('.pota-profile-icon').href = 'https://pota.app/#/profile/' + encodeURIComponent(baseCall);
   const callLink = row.querySelector('.pota-call');
   callLink.textContent = call;
   callLink.href = 'https://www.qrz.com/db/' + encodeURIComponent(baseCall);
 
   const refLink = row.querySelector('.ref');
   refLink.textContent = spot.reference || '';
-  refLink.href = isSota
-    ? `https://sotl.as/summits/${encodeURIComponent(spot.associationCode)}/${encodeURIComponent(spot.summitCode)}`
-    : 'https://pota.app/#/park/' + encodeURIComponent(spot.reference || '');
+  refLink.href = 'https://pota.app/#/park/' + encodeURIComponent(spot.reference || '');
 
   row.querySelector('.name').textContent = spot.locationName || '';
   row.querySelector('.pota-meta').textContent =
@@ -1215,7 +1203,9 @@ function buildPotaRow(spot) {
 }
 
 function renderPotaFilters() {
-  const networksPresent = ['POTA', 'SOTA'].filter(n => activatorSpots.some(s => s.network === n));
+  // A network filter only helps once there's more than one network to pick from.
+  const networks = [...new Set(activatorSpots.map(s => s.network))].sort();
+  const networksPresent = networks.length > 1 ? networks : [];
   const modesPresent = MODE_ORDER.filter(name => activatorSpots.some(s => spotModeBucket(s) === name));
   const bandsPresent = POTA_BAND_ORDER.filter(name => activatorSpots.some(s => s.band === name));
   const entitiesPresent = [...new Set(activatorSpots.map(potaEntity))].sort();
@@ -1260,7 +1250,7 @@ function renderPotaList() {
 
   potaList.innerHTML = '';
   if (!filtered.length) {
-    potaList.innerHTML = `<div class="pota-empty">${activatorSpots.length ? 'No activity matches the current filters.' : 'No European HF POTA/SOTA activity right now.'}</div>`;
+    potaList.innerHTML = `<div class="pota-empty">${activatorSpots.length ? 'No activity matches the current filters.' : 'No European HF POTA activity right now.'}</div>`;
   } else {
     const shown = potaExpanded ? filtered : filtered.slice(0, POTA_CAP);
     for (const spot of shown) potaList.appendChild(buildPotaRow(spot));
