@@ -343,10 +343,10 @@ That's the entire runtime dependency list — everything else (HTTP requests, JS
 
 Every notable change is logged in [CHANGELOG.md](CHANGELOG.md).
 
-## 73 de [DA6MAX](https://www.qrz.com/db/DA6MAX)
+## 73 de [DM6AX](https://www.qrz.com/db/DM6AX)
 
 <p align="center">
-  <a href="https://www.qrz.com/db/DA6MAX"><img src="https://cdn-bio.qrz.com/x/da6max/DA6MX_QSL.jpg" alt="DA6MAX QSL card" width="320"></a>
+  <a href="https://www.qrz.com/db/DM6AX"><img src="https://cdn-bio.qrz.com/x/dm6ax/DM6AX_QSL.jpg" alt="DM6AX QSL card" width="320"></a>
 </p>
 
 *Built to answer one question every morning: is it worth turning the radio on?*
@@ -369,4 +369,4 @@ Andreas, [DN9GU](https://www.qrz.com/db/DN9GU), reported that the ionosonde deta
 
 ## Transparency
 
-The idea and concept behind this tool were conceived by **Max Sammet (DA6MAX)**. The code was generated with the assistance of [Claude](https://www.anthropic.com/claude) by Anthropic. The header banner and app icon artwork (the illustrated llama) was generated with [Google Gemini](https://gemini.google.com/).
+The idea and concept behind this tool were conceived by **Max Sammet (DM6AX)**. The code was generated with the assistance of [Claude](https://www.anthropic.com/claude) by Anthropic. The header banner and app icon artwork (the illustrated llama) was generated with [Google Gemini](https://gemini.google.com/).
