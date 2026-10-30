@@ -2,6 +2,10 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [2.1.4] - 2026-10-30
+### Fixed
+- The header's second clock was hardcoded to Europe/Berlin and labeled CET/CEST, so it showed the wrong time for anyone outside Central Europe, reported in [issue #3](https://github.com/mooxle/Muf_Muncher/issues/3). It now follows the viewer's own browser timezone, with the matching abbreviation (WET/WEST, BST, EDT, ...) or a UTC offset (GMT+9) where English has no common abbreviation. Daylight saving is handled by the browser, and no configuration is needed.
+
 ## [2.1.3] - 2026-10-21
 ### Removed
 - SOTA spots, reported in [issue #2](https://github.com/mooxle/Muf_Muncher/issues/2). The endpoint `muf.py` polled (`api-db2.sota.org.uk/api/spots/-1/all`) has been deprecated and now returns a single placeholder "spot" (association `DEPRECATED`) carrying a notice instead of real data. `muf.py` never checked for that: the placeholder was silently filtered out as non-European, the fetch still counted as a success, and the dashboard showed a healthy "POTA/SOTA Data updated" line over a SOTA list that had quietly been empty. More importantly, SOTA's [API terms of service](https://api-db2.sota.org.uk/docs/) don't allow AI-generated software to connect without prior approval, require a registered point of contact, and ask people not to build yet another aggregating dashboard on top of it - and this project is openly built with AI assistance. So the SOTA fetch is gone entirely rather than pointed at a newer endpoint. Activator Activity is POTA-only for now, with a plain link out to SOTAwatch for SOTA spots instead; the README's SOTA API section and its "no formal terms of service found" note (wrong, and now outdated) are removed too.

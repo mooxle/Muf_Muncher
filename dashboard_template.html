@@ -39,7 +39,7 @@
       <div class="live-clock">
         <div class="clock-utc"><span id="utcClock">--:--:--</span> <span class="clock-tz">UTC</span></div>
         <div class="clock-date" id="clockDate">&nbsp;</div>
-        <div class="clock-local"><span id="localClock">--:--:--</span> <span class="clock-tz" id="localTz">CET</span></div>
+        <div class="clock-local"><span id="localClock">--:--:--</span> <span class="clock-tz" id="localTz"></span></div>
       </div>
       <div class="hdr-locator" id="hdrLocator"></div>
       <div class="hdr-utility-row">
@@ -364,7 +364,6 @@ if (tickerStations.length) {
 
 
 // Live clock - the one thing on this otherwise static page that actually ticks.
-const LOCAL_TZ = 'Europe/Berlin'; // CET/CEST; auto-adjusts for daylight saving below
 const utcClockEl = document.getElementById('utcClock');
 const clockDateEl = document.getElementById('clockDate');
 const localClockEl = document.getElementById('localClock');
@@ -575,6 +574,16 @@ function hms(h, m, s) {
   return `${h}<span class="clock-colon">:</span>${m}<span class="clock-colon">:</span>${s}`;
 }
 
+// en-GB names European zones (CET, WEST, BST) but only offsets the US ones
+// (GMT-4), en-US the reverse - try both so the label stays an English
+// abbreviation wherever possible, whatever language the browser is set to.
+function localTzLabel(date) {
+  const nameIn = (locale) => new Intl.DateTimeFormat(locale, { timeZoneName: 'short' })
+    .formatToParts(date).find((p) => p.type === 'timeZoneName').value;
+  const gb = nameIn('en-GB');
+  return /^GMT[+-]/.test(gb) ? nameIn('en-US') : gb;
+}
+
 function updateClock() {
   const nowLocal = new Date();
   const [h, m, s] = nowLocal.toISOString().substr(11, 8).split(':');
@@ -586,19 +595,12 @@ function updateClock() {
   }).format(nowLocal);
 
   const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: LOCAL_TZ, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   }).formatToParts(nowLocal);
   const get = (t) => parts.find((p) => p.type === t).value;
   localClockEl.innerHTML = hms(get('hour'), get('minute'), get('second'));
 
-  // CET is UTC+1, CEST (daylight saving) is UTC+2 - detect which is active
-  // right now rather than hardcoding, so the label is correct year-round.
-  const offsetParts = new Intl.DateTimeFormat('en', {
-    timeZone: LOCAL_TZ, timeZoneName: 'shortOffset',
-  }).formatToParts(nowLocal);
-  const offsetName = offsetParts.find((p) => p.type === 'timeZoneName').value; // e.g. "GMT+2"
-  const offsetHours = parseInt(offsetName.replace('GMT', ''), 10);
-  localTzEl.textContent = offsetHours >= 2 ? 'CEST' : 'CET';
+  localTzEl.textContent = localTzLabel(nowLocal);
 
   updateDataFreshness();
   updateActivatorFreshness();

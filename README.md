@@ -93,7 +93,7 @@ The dashboard is a static snapshot regenerated on every run — schedule it with
 | **Activator Activity** | Live POTA activator spots across Europe on HF bands (plus a link out to [SOTAwatch](https://sotawatch.sota.org.uk/) for SOTA), time-sorted and band-colored using the *same* MUF-derived open/marginal/closed logic as the hero row. Click a mode (SSB/CW/Digimode), band, or country chip to filter (multi-select), list caps at 7 rows with a "Show all" expander |
 | **Ionosonde detail** | foF2, MUF(D) and foEs charts for both hero stations, last 24h, with hover tooltips and a per-station legend toggle |
 | **Space Weather** | SFI, Kp (+ G-scale), GOES X-ray flux (+ flare class and R-scale), ACE solar wind speed, and daily sunspot number (SSN) — each with its own tile, sparkline, and a color rating (good/marginal/critical) for HF conditions |
-| **Header** | Live UTC + local clock, your active locator ("Your locator: JO40jg", or "Frankfurt am Main (JO40ic) · default" if unset — highlighted if it's outside the ten stations' coverage), a manual dark/light toggle (persisted across reloads), and the running version linked to source — which lights up with an "update available" badge when `muf.py` finds a newer GitHub release during its cron run |
+| **Header** | Live UTC clock + a second clock in your browser's own timezone, your active locator ("Your locator: JO40jg", or "Frankfurt am Main (JO40ic) · default" if unset — highlighted if it's outside the ten stations' coverage), a manual dark/light toggle (persisted across reloads), and the running version linked to source — which lights up with an "update available" badge when `muf.py` finds a newer GitHub release during its cron run |
 | **Data freshness** | Each major section has its own prominent "X Data updated" line (dot + timestamp), not just one page-wide stat: "GIRO Data updated" above the hero row, "POTA Data updated" above the activator list, "Space Weather Data updated" above the indices. Each reflects that source's actual latest successful reading, not just when `muf.py` last ran — color and wording scale to its own update cadence (~15min for all of them today), calling out "likely a data issue upstream" once ~2 cycles are missed, and adding the date once the last reading isn't from today. Independent per section, so one source's outage doesn't make the others look broken too |
 | **Satellite Passes** | Next 3 overflights each of the ISS and SO-50 (the most commonly worked easy LEO satellites for portable ops) over your configured locator — AOS/max-elevation/LOS times and azimuths for antenna aiming, plus a green/amber/red signal-bar icon by max elevation as a rough go/skip guide (bar count doubles up with color, so it still reads for colorblind users). Elapsed passes drop off the list live, without waiting for a reload |
 | **Home screen ready** | A reload button and a manual pull-to-refresh gesture, since iOS strips native pull-to-refresh once the page is added to the home screen as a standalone web app |
@@ -125,7 +125,7 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "MufMuncher/2.1.3 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/2.1.4 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \
@@ -364,6 +364,8 @@ Andreas, [DN9GU](https://www.qrz.com/db/DN9GU), reported that the ionosonde deta
 [Sn0rrii](https://github.com/netscout2001), in [this project's first GitHub issue](https://github.com/mooxle/Muf_Muncher/issues/1), reported that `docker-compose.yml` hardcoded `MUF_HOME_LOCATOR` as a literal empty value instead of `${VAR}` interpolation, silently ignoring it when set via a `.env` file or a stack manager's environment panel — fixed in v1.4.3.
 
 [vk3arr](https://github.com/vk3arr), in [issue #2](https://github.com/mooxle/Muf_Muncher/issues/2), pointed out that the SOTA endpoint `muf.py` polled had been deprecated without the app noticing, and that this project didn't meet the [SOTA API terms of service](https://api-db2.sota.org.uk/docs/) — SOTA spots were removed (replaced by a link to SOTAwatch) in v2.1.3.
+
+[gomes89](https://github.com/gomes89), in [issue #3](https://github.com/mooxle/Muf_Muncher/issues/3), reported from Portugal that the dashboard's second clock was hardcoded to CET/CEST, and suggested using the viewer's own timezone — fixed in v2.1.4.
 
 ---
 
