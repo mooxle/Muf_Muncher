@@ -86,9 +86,9 @@ The dashboard is a static snapshot regenerated on every run — schedule it with
 
 | Section | What it answers |
 |---|---|
-| **Hero row** | Current MUF(D) for each station + how far it is from your configured locator ("299km from you") + a green/yellow/gray chip per amateur band (20m–10m) estimating whether it's open right now, plus a Space Weather glance tile (SFI/Kp/X-ray/wind, color-rated) and a same-size Satellite Passes glance tile (next ISS/SO-50 pass countdown + max elevation, live-updating). All four tiles link down to their detail sections |
+| **Hero row** | Current MUF(D) for each station + how far it is from your configured locator ("299km from you") + a green/yellow/gray chip per amateur band (20m–10m) estimating whether it's open right now, plus a Space Weather glance tile (SFI/Kp/X-ray/wind, color-rated) and a same-size Satellite Passes glance tile (next ISS/SO-50 pass countdown + max elevation, live-updating). All four tiles link down to their detail sections. If one of the two nearest stations stops reporting while the others carry on (6h behind the rest), the next-nearest stands in automatically, labeled "standing in for …", and the original takes its place back once it reports again |
 | **Quick nav** | A minimal row of jump links (Activator Activity / Ionosonde Detail / Space Weather / Satellite Passes) between the freshness line and the hero row, for getting to a section without scrolling past everything above it |
-| **European Ticker** | Current MUF(D) for 8 more GIRO ionosonde stations across Europe (Spain, UK, Italy ×2, Greece, Czechia, Hungary, Norway) as compact pill chips — coverage without the chart overhead; hover a chip for its distance from your locator |
+| **European Ticker** | Current MUF(D) for 8 more GIRO ionosonde stations across Europe (Spain, UK, Italy ×2, Greece, Czechia, Hungary, Norway) as compact pill chips — coverage without the chart overhead; hover a chip for its distance from your locator. A station that has stopped reporting is greyed out instead of showing its last value as current (hover for "no data since …") |
 | **Global MUF Map** | One-click link out to [prop.kc2g.com](https://prop.kc2g.com)'s live, globally-interpolated MUF map |
 | **Activator Activity** | Live POTA activator spots across Europe on HF bands (plus a link out to [SOTAwatch](https://sotawatch.sota.org.uk/) for SOTA), time-sorted and band-colored using the *same* MUF-derived open/marginal/closed logic as the hero row. Click a mode (SSB/CW/Digimode), band, or country chip to filter (multi-select), list caps at 7 rows with a "Show all" expander |
 | **Ionosonde detail** | foF2, MUF(D) and foEs charts for both hero stations, last 24h, with hover tooltips and a per-station legend toggle |
@@ -125,7 +125,7 @@ GET https://lgdc.uml.edu/fastchar/getbest
 The block above is a readable illustration of the request, not something you can paste directly into a shell — the parentheses in `MUF(D)` and the space in the date are shell-special characters. To actually try it, let `curl --data-urlencode` handle the escaping instead of doing it by hand:
 
 ```bash
-curl -A "MufMuncher/2.1.4 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
+curl -A "MufMuncher/2.2.0 (+https://github.com/mooxle/Muf_Muncher)" -G "https://lgdc.uml.edu/fastchar/getbest" \
   --data-urlencode "ursiCode=DB049" \
   --data-urlencode "charName=foF2,MUF(D),foEs" \
   --data-urlencode "fromDate=2026/07/23 10:00:00" \

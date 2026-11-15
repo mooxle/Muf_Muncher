@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 import plotext as plt
 from skyfield.api import EarthSatellite, load, wgs84
 
-VERSION = "2.1.4"
+VERSION = "2.2.0"
 REPO_URL = "https://github.com/mooxle/Muf_Muncher"
 # Self-identifying User-Agent for every outbound fetch - lets GIRO/NOAA/POTA
 # see this is an automated client (and how to reach the maintainer) rather
@@ -127,8 +127,7 @@ _stations_by_distance = sorted(
     STATION_INFO.items(),
     key=lambda item: haversine_km(HOME_LATLON, (item[1][2], item[1][3])),
 )
-_hero_codes = [code for code, _ in _stations_by_distance[:2]]
-_ticker_codes = [code for code, _ in _stations_by_distance[2:]]
+RANKED_CODES = [code for code, _ in _stations_by_distance]
 # Per-station distance from HOME_LATLON, shown in the dashboard's hero tiles
 # ("Xkm from you") so a reader can judge at a glance how locally
 # representative a given reading actually is.
@@ -157,19 +156,50 @@ if FAR_FROM_COVERAGE:
 # history/charts); everything else falls back to the ticker (latest MUF(D)
 # only). Nearest two to the Frankfurt am Main fallback are Dourbes and
 # Pruhonice (not Juliusruh, despite that being the previous hardcoded
-# default) - Pruhonice is genuinely ~170km closer to Frankfurt.
-stations = {code: STATION_INFO[code][0] for code in _hero_codes}
+# default) - Pruhonice is genuinely ~170km closer to Frankfurt. A hero
+# station that has stopped reporting is swapped out at run time, see
+# choose_hero_stations() below.
 # foEs included alongside foF2/MUF(D): during strong Sporadic-E the F2 trace can
 # be unscoreable ("---" in the raw feed), so foEs is often the only usable value.
 chars = "foF2,MUF(D),foEs"
 
-# Ticker: more European stations, current MUF(D) only (no 24h history/chart -
-# that's what keeps these cheap to add).
-TICKER_STATIONS = {code: STATION_INFO[code][0] for code in _ticker_codes}
 # ISO 3166-1 alpha-2, shown as a small badge next to each ticker station since
 # not every reader knows which country a given ionosonde sits in.
-TICKER_COUNTRY = {code: STATION_INFO[code][1] for code in _ticker_codes}
+TICKER_COUNTRY = {code: STATION_INFO[code][1] for code in STATION_INFO}
 TICKER_LOOKBACK = timedelta(hours=6)
+LAST_SEEN_LOOKBACK = timedelta(days=30)
+
+# A station counts as down once its newest reading trails the freshest
+# station's by this much. Measured against the other stations rather than
+# the clock, so a GIRO-wide outage (every station equally behind) doesn't
+# shuffle hero tiles around - only one station going quiet on its own does
+# (seen live: Dourbes stopped reporting 2026-11-09 while the rest carried on).
+STATION_STALE = timedelta(hours=6)
+
+
+def down_codes(last_seen):
+    """Stations whose last reading trails the freshest one by more than
+    STATION_STALE, or that have been checked but never had a reading."""
+    times = {c: datetime.strptime(v["time"], ISO_FORM).replace(tzinfo=timezone.utc)
+             for c, v in last_seen.items() if v.get("time")}
+    if not times:
+        return set()
+    freshest = max(times.values())
+    return {c for c in last_seen if c not in times or freshest - times[c] > STATION_STALE}
+
+
+def choose_hero_stations(down):
+    """The two nearest stations that aren't down (nearest two regardless if
+    fewer than two are up), plus which displaced station each stand-in is
+    covering for. A displaced station moves to the ticker, whose fetch keeps
+    checking it - once it reports again it's no longer down, and the next
+    run puts it back as a hero."""
+    heroes = [c for c in RANKED_CODES if c not in down][:2]
+    heroes += [c for c in RANKED_CODES if c not in heroes][:2 - len(heroes)]
+    heroes.sort(key=RANKED_CODES.index)
+    preferred = RANKED_CODES[:2]
+    standing_in = dict(zip([c for c in heroes if c not in preferred], [c for c in preferred if c not in heroes]))
+    return heroes, standing_in
 
 DATE_FORM = "d/m/Y H:M:S"
 
@@ -248,14 +278,14 @@ def fetch_station(station):
     return records
 
 
-def fetch_ticker_value(station):
+def fetch_ticker_value(station, lookback=TICKER_LOOKBACK):
     """Latest MUF(D) only, short lookback window - no history kept, just
     today's reading for the ticker row."""
     query = urllib.parse.urlencode(
         {
             "ursiCode": station,
             "charName": "MUF(D)",
-            "fromDate": (now - TICKER_LOOKBACK).strftime("%Y/%m/%d %H:%M:%S"),
+            "fromDate": (now - lookback).strftime("%Y/%m/%d %H:%M:%S"),
             "toDate": to_time,
         }
     )
@@ -602,7 +632,10 @@ EXTRA_OUTPUT_PATHS = [
 OUTPUT_DIRS = sorted({OUTPUT_DIR, *(os.path.dirname(p) for p in EXTRA_OUTPUT_PATHS)})
 
 
-def render_html(store, stations, generated_at, activator_spots, ticker_stations, latest_version=None):
+def render_html(store, stations, generated_at, activator_spots, ticker_stations, latest_version=None,
+                last_seen=None, down=frozenset(), standing_in=None):
+    last_seen = last_seen or {}
+    standing_in = standing_in or {}
     payload = {
         "generatedAt": generated_at.strftime(ISO_FORM),
         "version": VERSION,
@@ -617,6 +650,16 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
                 "name": store[code]["name"],
                 "records": store[code]["records"],
                 "distanceKm": DISTANCE_BY_CODE.get(code),
+                "lastSeen": last_seen.get(code, {}).get("time"),
+                "stale": code in down,
+                "standingInFor": (
+                    {
+                        "name": STATION_INFO[standing_in[code]][0],
+                        "lastSeen": last_seen.get(standing_in[code], {}).get("time"),
+                    }
+                    if code in standing_in
+                    else None
+                ),
             }
             for code in stations
             if code in store
@@ -635,10 +678,13 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
                 "name": name,
                 "country": TICKER_COUNTRY.get(code),
                 "distanceKm": DISTANCE_BY_CODE.get(code),
-                **store["_ticker"][code],
+                "time": None,
+                "muf": None,
+                **store.get("_ticker", {}).get(code, {}),
+                "lastSeen": last_seen.get(code, {}).get("time"),
+                "stale": code in down,
             }
             for code, name in ticker_stations.items()
-            if code in store.get("_ticker", {})
         ],
     }
     with open(HTML_TEMPLATE_PATH) as f:
@@ -676,20 +722,51 @@ def render_html(store, stations, generated_at, activator_spots, ticker_stations,
 
 store = load_store()
 
+# Newest reading per station, kept across runs (unlike the 24h-pruned
+# records), so a station that's been quiet for days can still say since
+# when. An entry only exists once a fetch for that station has succeeded;
+# "time": None means it succeeded but found nothing in its lookback window.
+last_seen = store.get("_lastSeen", {})
+
+
+def note_seen(code, newest):
+    if newest:
+        last_seen[code] = {"time": newest}
+    elif code not in last_seen:
+        # Nothing recent and no history yet (fresh install, or a store from
+        # before this existed): look back further once, so the dashboard can
+        # say since when the station has been quiet rather than just "no
+        # recent data". Only on first sight - after that the entry exists.
+        try:
+            older = fetch_ticker_value(code, lookback=LAST_SEEN_LOOKBACK)
+        except (urllib.error.URLError, TimeoutError, ValueError):
+            older = None
+        last_seen[code] = {"time": older["time"] if older else None}
+
+
+hero_codes, standing_in = choose_hero_stations(down_codes(last_seen))
+stations = {code: STATION_INFO[code][0] for code in hero_codes}
+TICKER_STATIONS = {code: STATION_INFO[code][0] for code in RANKED_CODES if code not in stations}
+for sub, displaced in standing_in.items():
+    print(f"{STATION_INFO[displaced][0]} has stopped reporting - {STATION_INFO[sub][0]} stands in as a hero station")
+
 data = {}
 for station, name in stations.items():
     print(f"Fetching {name} ({station})...")
+    fetched = True
     try:
         fresh_records = fetch_station(station)
     except urllib.error.HTTPError as e:
         print(f"HTTP Error {e.code}: {e.reason} for {name}")
-        fresh_records = []
+        fresh_records, fetched = [], False
     except Exception as e:
         print(f"Unexpected error fetching {name} ({station}): {e}")
-        fresh_records = []
+        fresh_records, fetched = [], False
 
     pruned = merge_and_prune(store.get(station, {}).get("records", []), fresh_records)
     store[station] = {"name": name, "records": pruned}
+    if fetched:
+        note_seen(station, max((r["time"] for r in pruned), default=last_seen.get(station, {}).get("time")))
 
     times = [datetime.strptime(r["time"], ISO_FORM).strftime("%d/%m/%Y %H:%M:%S") for r in pruned]
     fof2 = [r["foF2"] for r in pruned]
@@ -759,6 +836,7 @@ for code, name in TICKER_STATIONS.items():
     print(f"Fetching ticker value for {name} ({code})...")
     try:
         latest = fetch_ticker_value(code)
+        note_seen(code, latest["time"] if latest else None)
     except (urllib.error.URLError, TimeoutError) as e:
         print(f"Failed to fetch ticker value for {name}: {e}")
         latest = None
@@ -768,6 +846,7 @@ for code, name in TICKER_STATIONS.items():
     # transient failure shows the last known reading instead of nothing.
     _time.sleep(0.75)  # spread out GIRO/lgdc.uml.edu requests, avoid tripping its rate limiter
 store["_ticker"] = ticker
+store["_lastSeen"] = last_seen
 
 tle_cache = store.get("_tle", {})
 for sat_name, norad_id in SATELLITES:
@@ -822,7 +901,10 @@ if latest_version is not None:
 latest_version = store.get("_latestVersion")
 
 save_store(store)
-html_path = render_html(store, stations, now, activator_spots, TICKER_STATIONS, latest_version)
+html_path = render_html(
+    store, stations, now, activator_spots, TICKER_STATIONS, latest_version,
+    last_seen=last_seen, down=down_codes(last_seen), standing_in=standing_in,
+)
 summary_path = render_summary(store, stations, now, latest_version)
 print(f"Dashboard written to {html_path}")
 print(f"Summary written to {summary_path}")

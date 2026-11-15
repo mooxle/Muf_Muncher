@@ -349,13 +349,25 @@ syncThemeIcon();
 // Ticker: more European MUF(D) readings, current value only - names/codes are
 // our own static config (not external/untrusted input), so building this via
 // innerHTML is fine.
+// A station flagged stale by muf.py has stopped reporting while the others
+// carry on - say since when, rather than show its last reading as current.
+function noDataSince(iso) {
+  if (!iso) return 'no recent data';
+  const when = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'UTC', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(iso));
+  return `no data since ${when} UTC`;
+}
+
 const tickerStations = DATA.tickerStations || [];
 const tickerRowEl = document.getElementById('tickerRow');
 if (tickerStations.length) {
   const chips = tickerStations.map(s => {
-    const val = s.muf != null ? `${s.muf.toFixed(2)} MHz` : '—';
-    const title = s.distanceKm != null ? ` title="${s.distanceKm}km from you"` : '';
-    return `<span class="ticker-chip"${title}><span class="ticker-name">${s.name}</span><span class="ticker-country">${s.country || ''}</span><span class="ticker-value">${val}</span></span>`;
+    const val = !s.stale && s.muf != null ? `${s.muf.toFixed(2)} MHz` : '—';
+    const dist = s.distanceKm != null ? `${s.distanceKm}km from you` : '';
+    const tip = [dist, s.stale ? noDataSince(s.lastSeen) : ''].filter(Boolean).join(' · ');
+    const title = tip ? ` title="${tip}"` : '';
+    return `<span class="ticker-chip${s.stale ? ' stale' : ''}"${title}><span class="ticker-name">${s.name}</span><span class="ticker-country">${s.country || ''}</span><span class="ticker-value">${val}</span></span>`;
   });
   tickerRowEl.innerHTML = '<span class="ticker-label">More Europe</span>' + chips.join('');
 } else {
@@ -385,7 +397,8 @@ const generatedAtMs = new Date(DATA.generatedAt).getTime();
 // generatedAt) when there's truly no reading anywhere yet, e.g. a fresh
 // install before the first successful fetch.
 const stationTimes = stations.flatMap(s => s.records.map(r => new Date(r.time).getTime()))
-  .concat(tickerStations.map(s => new Date(s.time).getTime()));
+  .concat(tickerStations.map(s => new Date(s.time).getTime()))
+  .filter(Number.isFinite);
 const latestDataMs = stationTimes.length ? Math.max(...stationTimes) : null;
 
 // How stale is a source's data, relative to its own update cadence rather
@@ -935,6 +948,16 @@ function bandStatus(muf, freq) {
 }
 
 const heroRow = document.getElementById('heroRow');
+
+// Shown when muf.py swapped in this station because a nearer one stopped
+// reporting, or when a hero has no usable data itself.
+function heroNote(s) {
+  if (s.standingInFor) {
+    return `<div class="hero-note">standing in for ${s.standingInFor.name} &middot; ${noDataSince(s.standingInFor.lastSeen)}</div>`;
+  }
+  if (s.stale || !s.records.length) return `<div class="hero-note warn">${noDataSince(s.lastSeen)}</div>`;
+  return '';
+}
 for (const s of stations) {
   const last = lastNonNull(s.records, 'muf');
   const muf = last ? last.muf : null;
@@ -959,6 +982,7 @@ for (const s of stations) {
   card.style.setProperty('--hero-color', s.color);
   card.innerHTML = `
     <div class="hero-name">${s.name}${s.distanceKm != null ? `<span class="hero-distance">${s.distanceKm}km from you</span>` : ''}</div>
+    ${heroNote(s)}
     <div class="hero-value-row">
       <div><span class="hero-value">${muf != null ? muf.toFixed(2) : '–'}</span><span class="hero-unit">MHz</span></div>
       ${deltaHtml}

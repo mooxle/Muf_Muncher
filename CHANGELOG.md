@@ -2,6 +2,12 @@
 
 All notable changes to MUF Muncher are documented here.
 
+## [2.2.0] - 2026-11-15
+### Added
+- A hero station that stops reporting is replaced automatically. Seen live: Dourbes, the nearest station for most of Germany, stopped sending data on 2026-11-09 while every other station carried on - its tile sat empty for days, and the page-wide "GIRO Data updated" line stayed green because the other stations were current. A station now counts as down once its newest reading trails the freshest station's by more than 6 hours; the next-nearest station that's up takes its tile, labeled "standing in for Dourbes · no data since 9 Nov, 10:25 UTC", with its full 24h history. The displaced station moves to the ticker, which keeps checking it, so it takes its tile back on the first run after it reports again. Measuring against the other stations rather than the clock means a GIRO-wide outage, where every station is equally behind, doesn't shuffle the tiles.
+- Ticker chips for stations that have stopped reporting are greyed out with "—" instead of showing their last value as if it were current (hover for "no data since …").
+- `muf_data.json` keeps each station's newest reading time (`_lastSeen`) across runs, independent of the 24h history window. On first sight of a quiet station it looks back up to 30 days once, so a fresh install can still say since when.
+
 ## [2.1.4] - 2026-10-30
 ### Fixed
 - The header's second clock was hardcoded to Europe/Berlin and labeled CET/CEST, so it showed the wrong time for anyone outside Central Europe, reported in [issue #3](https://github.com/mooxle/Muf_Muncher/issues/3). It now follows the viewer's own browser timezone, with the matching abbreviation (WET/WEST, BST, EDT, ...) or a UTC offset (GMT+9) where English has no common abbreviation. Daylight saving is handled by the browser, and no configuration is needed.
